@@ -1,11 +1,5 @@
 package com.dashdive.internal.batching;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import java.util.HashMap;
-import java.util.Optional;
-import javax.annotation.Nullable;
 import com.dashdive.ImmutableS3EventAttributeExtractorInput;
 import com.dashdive.ImmutableS3EventAttributes;
 import com.dashdive.S3ActionType;
@@ -19,6 +13,12 @@ import com.dashdive.internal.S3SingleExtractedEvent;
 import com.dashdive.internal.telemetry.ImmutableTelemetryItem;
 import com.dashdive.internal.telemetry.TelemetryItem;
 import com.dashdive.internal.telemetry.TelemetryPayload;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import java.util.HashMap;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.regions.Region;

@@ -1,8 +1,8 @@
 package com.dashdive.internal;
 
+import com.dashdive.internal.telemetry.TelemetryPayload;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableMap;
-import com.dashdive.internal.telemetry.TelemetryPayload;
 import org.immutables.value.Value;
 
 @Value.Immutable

@@ -1,8 +1,8 @@
 package com.dashdive.internal.extraction;
 
+import com.dashdive.S3ActionType;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableMap;
-import com.dashdive.S3ActionType;
 import org.immutables.value.Value;
 
 @Value.Immutable

@@ -1,5 +1,7 @@
 package com.dashdive.internal.batching;
 
+import com.dashdive.internal.S3EventFieldName;
+import com.dashdive.internal.S3SingleExtractedEvent;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,8 +14,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.lang3.tuple.Pair;
-import com.dashdive.internal.S3EventFieldName;
-import com.dashdive.internal.S3SingleExtractedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

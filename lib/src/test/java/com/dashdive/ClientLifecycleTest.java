@@ -1,5 +1,12 @@
 package com.dashdive;
 
+import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
+import com.dashdive.internal.ImmutableSetupDefaults;
+import com.dashdive.internal.SetupDefaults;
+import com.dashdive.internal.extraction.S3RoundTripInterceptor;
+import com.dashdive.internal.telemetry.EventPipelineMetrics;
+import com.dashdive.internal.telemetry.TelemetryPayload;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,13 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import com.dashdive.internal.DashdiveConnection;
-import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
-import com.dashdive.internal.ImmutableSetupDefaults;
-import com.dashdive.internal.SetupDefaults;
-import com.dashdive.internal.extraction.S3RoundTripInterceptor;
-import com.dashdive.internal.telemetry.EventPipelineMetrics;
-import com.dashdive.internal.telemetry.TelemetryPayload;
 import org.immutables.value.Value;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

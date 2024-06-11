@@ -1,12 +1,12 @@
 package com.dashdive.internal.extraction;
 
+import com.dashdive.S3ActionType;
+import com.dashdive.internal.S3EventFieldName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import com.dashdive.S3ActionType;
-import com.dashdive.internal.S3EventFieldName;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.http.SdkHttpRequest;

@@ -1,13 +1,13 @@
 package com.dashdive.internal.extraction;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.dashdive.internal.ImmutableS3SingleExtractedEvent;
 import com.dashdive.internal.S3SingleExtractedEvent;
 import com.dashdive.internal.batching.SingleEventBatcher;
 import com.dashdive.internal.telemetry.ExceptionUtil;
 import com.dashdive.internal.telemetry.ImmutableTelemetryItem;
 import com.dashdive.internal.telemetry.TelemetryPayload;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.interceptor.Context;
