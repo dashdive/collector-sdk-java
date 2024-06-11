@@ -102,7 +102,8 @@ public class InternalExtractionTest {
 
     final List<String> batchIngestBodies =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
-    batchMockHttpClient.assertAllUrisMatch(DashdiveConnection.Routes.S3_BATCH_INGEST.getPath());
+    batchMockHttpClient.assertAllUrisMatch(
+        DashdiveConnection.getRoute(DashdiveConnection.Route.S3_BATCH_INGEST).getPath());
     final List<Map<String, Object>> ingestedEvents =
         TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
 
@@ -294,7 +295,8 @@ public class InternalExtractionTest {
     final MockHttpClient batchMockHttpClient = sendSingleEvent("extraction_exception", context);
 
     batchMockHttpClient.assertAllUrisMatch(
-        DashdiveConnection.Routes.TELEMETRY_EXTRACTION_ISSUES.getPath());
+        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES)
+            .getPath());
     final List<String> issueEventStrings =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
 

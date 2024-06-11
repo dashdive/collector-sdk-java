@@ -86,7 +86,8 @@ public class ClientLifecycleTest {
             true);
     dashdive.blockUntilSetupComplete();
 
-    final String fullApiKeyTelemetryPath = DashdiveConnection.Routes.TELEMETRY_API_KEY.getPath();
+    final String fullApiKeyTelemetryPath =
+        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_API_KEY).getPath();
     List<Optional<String>> matchingRequestBodies =
         startupMockedClient.getRequests().stream()
             .filter(req -> fullApiKeyTelemetryPath.equals(req.request().uri().getPath()))
@@ -148,7 +149,7 @@ public class ClientLifecycleTest {
     dashdive.close();
 
     final String fullLifecycleTelemetryPath =
-        DashdiveConnection.Routes.TELEMETRY_LIFECYCLE.getPath();
+        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE).getPath();
     final List<Optional<String>> startupReqBodies =
         startupMockedClient.getRequests().stream()
             .filter(req -> fullLifecycleTelemetryPath.equals(req.request().uri().getPath()))

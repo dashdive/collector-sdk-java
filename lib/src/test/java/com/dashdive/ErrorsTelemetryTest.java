@@ -70,7 +70,10 @@ class ErrorsTelemetryTest {
                     req.request()
                         .uri()
                         .getPath()
-                        .equals(DashdiveConnection.Routes.TELEMETRY_EXTRACTION_ISSUES.getPath()))
+                        .equals(
+                            DashdiveConnection.getRoute(
+                                    DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES)
+                                .getPath()))
             .collect(Collectors.toList());
     final List<String> issueEventStrings =
         MockHttpClient.unboxRequestBodiesAssertingNonempty(matchingRequests);

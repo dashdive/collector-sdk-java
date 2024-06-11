@@ -102,7 +102,7 @@ public class UserExtractionTest {
     dashdive.blockUntilShutdownComplete();
 
     final String extractionIssuesPath =
-        DashdiveConnection.Routes.TELEMETRY_EXTRACTION_ISSUES.getPath();
+        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
     final List<Optional<String>> extractionIssuesReqBodies =
         batchMockHttpClient.getRequests().stream()
             .filter(req -> extractionIssuesPath.equals(req.request().uri().getPath()))
@@ -154,7 +154,7 @@ public class UserExtractionTest {
     dashdive.blockUntilShutdownComplete();
 
     final String extractionIssuesPath =
-        DashdiveConnection.Routes.TELEMETRY_EXTRACTION_ISSUES.getPath();
+        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
     final List<Optional<String>> extractionIssuesReqBodies =
         batchMockHttpClient.getRequests().stream()
             .filter(req -> extractionIssuesPath.equals(req.request().uri().getPath()))
@@ -224,7 +224,8 @@ public class UserExtractionTest {
 
     final List<String> batchIngestBodies =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
-    batchMockHttpClient.assertAllUrisMatch(DashdiveConnection.Routes.S3_BATCH_INGEST.getPath());
+    batchMockHttpClient.assertAllUrisMatch(
+        DashdiveConnection.getRoute(DashdiveConnection.Route.S3_BATCH_INGEST).getPath());
     final List<Map<String, Object>> ingestedEvents =
         TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
 

@@ -17,7 +17,22 @@ import java.util.stream.Stream;
 import org.immutables.value.Value;
 
 public class DashdiveConnection {
-  public static final URI INGEST_BASE_URI = URI.create("https://staging.ingest.dashdive.com");
+  private DashdiveConnection() {}
+
+  private static final URI PROD_INGEST_BASE_URI = URI.create("https://ingest.dashdive.com");
+  private static URI ingestBaseUri = PROD_INGEST_BASE_URI;
+
+  public static void _setIngestBaseUri(URI uri) {
+    ingestBaseUri = uri;
+  }
+
+  public static URI _getIngestBaseUri() {
+    return ingestBaseUri;
+  }
+
+  public static void _resetIngestBaseUri() {
+    ingestBaseUri = PROD_INGEST_BASE_URI;
+  }
 
   public static final ObjectMapper DEFAULT_SERIALIZER =
       new ObjectMapper().registerModule(new Jdk8Module());
@@ -53,19 +68,31 @@ public class DashdiveConnection {
     public static final String USER_AGENT = "User-Agent";
   }
 
-  public static class Routes {
-    public static final URI PING = INGEST_BASE_URI.resolve("/ping");
+  public static enum Route {
+    PING("/ping"),
 
-    public static final URI S3_RECOMMENDED_BATCH_SIZE =
-        INGEST_BASE_URI.resolve("/s3/recommendedBatchSize");
-    public static final URI S3_BATCH_INGEST = INGEST_BASE_URI.resolve("/s3/batch");
+    S3_RECOMMENDED_BATCH_SIZE("/s3/recommendedBatchSize"),
+    S3_BATCH_INGEST("/s3/batch"),
 
-    public static final URI TELEMETRY_API_KEY = INGEST_BASE_URI.resolve("/telemetry/invalidApiKey");
-    public static final URI TELEMETRY_LIFECYCLE = INGEST_BASE_URI.resolve("/telemetry/lifecycle");
-    public static final URI TELEMETRY_EXTRACTION_ISSUES =
-        INGEST_BASE_URI.resolve("/telemetry/extractionIssues");
-    public static final URI TELEMETRY_METRICS =
-        INGEST_BASE_URI.resolve("/telemetry/metricsIncremental");
+    TELEMETRY_API_KEY("/telemetry/invalidApiKey"),
+    TELEMETRY_LIFECYCLE("/telemetry/lifecycle"),
+    TELEMETRY_EXTRACTION_ISSUES("/telemetry/extractionIssues"),
+    TELEMETRY_METRICS("/telemetry/metricsIncremental");
+
+    private final String pathValue;
+
+    Route(final String pathValue) {
+      this.pathValue = pathValue;
+    }
+
+    @Override
+    public String toString() {
+      return pathValue;
+    }
+  }
+
+  public static URI getRoute(Route route) {
+    return ingestBaseUri.resolve(route.toString());
   }
 
   public static class APIKey {

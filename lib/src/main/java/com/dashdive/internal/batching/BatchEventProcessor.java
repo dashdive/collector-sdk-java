@@ -271,7 +271,7 @@ public class BatchEventProcessor {
         final String sendBatchBodyJson = objectMapper.writeValueAsString(validEvents);
         final HttpRequest sendBatchRequest =
             HttpRequest.newBuilder()
-                .uri(DashdiveConnection.Routes.S3_BATCH_INGEST)
+                .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.S3_BATCH_INGEST))
                 .header(DashdiveConnection.Headers.USER_AGENT, userAgent)
                 .header(DashdiveConnection.Headers.API_KEY, apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(sendBatchBodyJson))
@@ -308,7 +308,9 @@ public class BatchEventProcessor {
             objectMapper.writeValueAsString(extractionIssuesPayload);
         final HttpRequest sendTelemetryRequest =
             HttpRequest.newBuilder()
-                .uri(DashdiveConnection.Routes.TELEMETRY_EXTRACTION_ISSUES)
+                .uri(
+                    DashdiveConnection.getRoute(
+                        DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES))
                 .header(DashdiveConnection.Headers.USER_AGENT, userAgent)
                 .header(DashdiveConnection.Headers.API_KEY, apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(sendTelemetryBodyJson))

@@ -79,7 +79,7 @@ public class EventPipelineMetrics {
       final String requestBodyJson = objectMapper.writeValueAsString(metricsPayload);
       final HttpRequest metricsRequest =
           HttpRequest.newBuilder()
-              .uri(DashdiveConnection.Routes.TELEMETRY_METRICS)
+              .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_METRICS))
               .header(DashdiveConnection.Headers.USER_AGENT, userAgent)
               .header(DashdiveConnection.Headers.API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
