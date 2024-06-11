@@ -169,7 +169,7 @@ index 4c0437f..ec8a24b 100644
        final TelemetryPayload executionFailurePayload =
            TelemetryPayload.from(
 @@ -121,8 +121,8 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
-   private boolean safeAfterExecutionWithSuccess(
+   private boolean safeAfterExecutionReturningSuccess(
        Context.AfterExecution context, ExecutionAttributes executionAttributes) {
      try {
 -      final boolean hasSentPayload =

@@ -47,19 +47,19 @@ public class ClientLifecycleTest {
     final S3RoundTripInterceptor interceptor = dashdive.getInterceptorForImperativeTrigger();
 
     final boolean wasQueuedPreShutdown1 =
-        interceptor._afterExecutionWithSuccess(
+        interceptor._afterExecutionReturningSuccess(
             TestUtils.GENERIC_INTERCEPTED_EVENT, TestUtils.EXEC_ATTRS_EMPTY);
     final boolean wasQueuedPreShutdown2 =
-        interceptor._afterExecutionWithSuccess(
+        interceptor._afterExecutionReturningSuccess(
             TestUtils.GENERIC_INTERCEPTED_EVENT, TestUtils.EXEC_ATTRS_EMPTY);
 
     dashdive.close();
 
     final boolean wasQueuedPostShutdown1 =
-        interceptor._afterExecutionWithSuccess(
+        interceptor._afterExecutionReturningSuccess(
             TestUtils.GENERIC_INTERCEPTED_EVENT, TestUtils.EXEC_ATTRS_EMPTY);
     final boolean wasQueuedPostShutdown2 =
-        interceptor._afterExecutionWithSuccess(
+        interceptor._afterExecutionReturningSuccess(
             TestUtils.GENERIC_INTERCEPTED_EVENT, TestUtils.EXEC_ATTRS_EMPTY);
 
     Assertions.assertTrue(wasQueuedPreShutdown1);

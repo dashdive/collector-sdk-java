@@ -118,7 +118,7 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
     }
   }
 
-  private boolean safeAfterExecutionWithSuccess(
+  private boolean safeAfterExecutionReturningSuccess(
       Context.AfterExecution context, ExecutionAttributes executionAttributes) {
     try {
       final boolean hasSentPayload =
@@ -145,12 +145,12 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
   @Override
   public void afterExecution(
       Context.AfterExecution context, ExecutionAttributes executionAttributes) {
-    safeAfterExecutionWithSuccess(context, executionAttributes);
+    safeAfterExecutionReturningSuccess(context, executionAttributes);
   }
 
   @VisibleForTesting
-  public boolean _afterExecutionWithSuccess(
+  public boolean _afterExecutionReturningSuccess(
       Context.AfterExecution context, ExecutionAttributes executionAttributes) {
-    return safeAfterExecutionWithSuccess(context, executionAttributes);
+    return safeAfterExecutionReturningSuccess(context, executionAttributes);
   }
 }
