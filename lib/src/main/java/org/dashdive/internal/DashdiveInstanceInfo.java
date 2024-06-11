@@ -1,4 +1,4 @@
-package org.dashdive.internal;
+package com.dashdive.internal;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.util.Optional;

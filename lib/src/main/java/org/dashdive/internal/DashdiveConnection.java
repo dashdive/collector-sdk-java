@@ -1,4 +1,4 @@
-package org.dashdive.internal;
+package com.dashdive.internal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.dashdive.Dashdive;
+import com.dashdive.Dashdive;
 import org.immutables.value.Value;
 
 public class DashdiveConnection {

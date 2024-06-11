@@ -1,4 +1,4 @@
-package org.dashdive.internal.telemetry;
+package com.dashdive.internal.telemetry;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
-import org.dashdive.internal.DashdiveConnection;
-import org.dashdive.internal.DashdiveInstanceInfo;
+import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.DashdiveInstanceInfo;
 
 public class EventPipelineMetrics {
   private final ImmutableMap<Type, Metric> metrics;

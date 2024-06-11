@@ -1,4 +1,4 @@
-package org.dashdive.internal.batching;
+package com.dashdive.internal.batching;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -21,17 +21,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nullable;
-import org.dashdive.Dashdive;
-import org.dashdive.S3EventAttributeExtractor;
-import org.dashdive.S3EventAttributeExtractorFactory;
-import org.dashdive.internal.DashdiveConnection;
-import org.dashdive.internal.DashdiveConnection.BackoffSendConfig;
-import org.dashdive.internal.DashdiveInstanceInfo;
-import org.dashdive.internal.ImmutableBackoffSendConfig;
-import org.dashdive.internal.S3SingleExtractedEvent;
-import org.dashdive.internal.telemetry.EventPipelineMetrics;
-import org.dashdive.internal.telemetry.ImmutableTelemetryEvent;
-import org.dashdive.internal.telemetry.TelemetryEvent;
+import com.dashdive.Dashdive;
+import com.dashdive.S3EventAttributeExtractor;
+import com.dashdive.S3EventAttributeExtractorFactory;
+import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.DashdiveConnection.BackoffSendConfig;
+import com.dashdive.internal.DashdiveInstanceInfo;
+import com.dashdive.internal.ImmutableBackoffSendConfig;
+import com.dashdive.internal.S3SingleExtractedEvent;
+import com.dashdive.internal.telemetry.EventPipelineMetrics;
+import com.dashdive.internal.telemetry.ImmutableTelemetryEvent;
+import com.dashdive.internal.telemetry.TelemetryEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

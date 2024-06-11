@@ -1,10 +1,10 @@
-package org.dashdive.internal.telemetry;
+package com.dashdive.internal.telemetry;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.dashdive.internal.DashdiveInstanceInfo;
-import org.dashdive.internal.S3SingleExtractedEvent;
+import com.dashdive.internal.DashdiveInstanceInfo;
+import com.dashdive.internal.S3SingleExtractedEvent;
 import org.immutables.value.Value;
 
 @Value.Enclosing

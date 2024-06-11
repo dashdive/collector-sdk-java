@@ -1,4 +1,4 @@
-package org.dashdive;
+package com.dashdive;
 
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;

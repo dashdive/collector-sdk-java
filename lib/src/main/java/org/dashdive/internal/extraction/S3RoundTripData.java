@@ -1,4 +1,4 @@
-package org.dashdive.internal.extraction;
+package com.dashdive.internal.extraction;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;

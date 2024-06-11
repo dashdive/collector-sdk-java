@@ -1,4 +1,4 @@
-package org.dashdive.internal.batching;
+package com.dashdive.internal.batching;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
@@ -12,8 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.lang3.tuple.Pair;
-import org.dashdive.internal.S3EventFieldName;
-import org.dashdive.internal.S3SingleExtractedEvent;
+import com.dashdive.internal.S3EventFieldName;
+import com.dashdive.internal.S3SingleExtractedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,7 +146,7 @@ public class SingleEventBatcher {
   public static final int DEFAULT_TARGET_BATCH_SIZE = 100;
   private static final int EVENT_MAX_AGE_MS = 2000;
   // `java -jar jol-cli-latest.jar internals -classpath lib/build/classes/java/main
-  // org.dashdive.ImmutableS3SingleExtractedEvent`
+  // com.dashdive.ImmutableS3SingleExtractedEvent`
   // Ballpark size of S3SingleExtractedEvent object:
   // - Contains 3 map fields (JOL gives total size 24 bytes)
   // - Error and telemetry maps may be larger, but assume they're

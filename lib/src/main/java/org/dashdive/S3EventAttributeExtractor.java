@@ -1,4 +1,4 @@
-package org.dashdive;
+package com.dashdive;
 
 import javax.annotation.Nonnull;
 

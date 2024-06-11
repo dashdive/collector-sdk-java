@@ -1,4 +1,4 @@
-package org.dashdive;
+package com.dashdive;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.dashdive.MockHttpClient.HttpRequestWithBody;
-import org.dashdive.internal.DashdiveConnection;
-import org.dashdive.internal.ImmutableDashdiveInstanceInfo;
-import org.dashdive.internal.ImmutableSetupDefaults;
-import org.dashdive.internal.SetupDefaults;
-import org.dashdive.internal.telemetry.TelemetryPayload;
+import com.dashdive.MockHttpClient.HttpRequestWithBody;
+import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
+import com.dashdive.internal.ImmutableSetupDefaults;
+import com.dashdive.internal.SetupDefaults;
+import com.dashdive.internal.telemetry.TelemetryPayload;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;

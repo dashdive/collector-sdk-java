@@ -1,6 +1,6 @@
-package org.dashdive.internal;
+package com.dashdive.internal;
 
-import org.dashdive.internal.telemetry.TelemetryPayload;
+import com.dashdive.internal.telemetry.TelemetryPayload;
 import org.immutables.value.Value;
 
 @Value.Immutable

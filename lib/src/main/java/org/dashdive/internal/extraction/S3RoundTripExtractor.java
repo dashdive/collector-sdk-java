@@ -1,4 +1,4 @@
-package org.dashdive.internal.extraction;
+package com.dashdive.internal.extraction;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -8,13 +8,13 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import org.dashdive.S3Provider;
-import org.dashdive.internal.ImmutableS3SingleExtractedEvent;
-import org.dashdive.internal.S3EventFieldName;
-import org.dashdive.internal.S3SingleExtractedEvent;
-import org.dashdive.internal.telemetry.ExceptionUtil;
-import org.dashdive.internal.telemetry.ImmutableTelemetryItem;
-import org.dashdive.internal.telemetry.TelemetryPayload;
+import com.dashdive.S3Provider;
+import com.dashdive.internal.ImmutableS3SingleExtractedEvent;
+import com.dashdive.internal.S3EventFieldName;
+import com.dashdive.internal.S3SingleExtractedEvent;
+import com.dashdive.internal.telemetry.ExceptionUtil;
+import com.dashdive.internal.telemetry.ImmutableTelemetryItem;
+import com.dashdive.internal.telemetry.TelemetryPayload;
 
 public class S3RoundTripExtractor {
 

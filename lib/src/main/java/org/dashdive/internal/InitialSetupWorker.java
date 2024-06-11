@@ -1,4 +1,4 @@
-package org.dashdive.internal;
+package com.dashdive.internal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -18,13 +18,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.dashdive.Dashdive;
-import org.dashdive.internal.batching.SingleEventBatcher;
-import org.dashdive.internal.telemetry.ExceptionUtil;
-import org.dashdive.internal.telemetry.ImmutableTelemetryEvent;
-import org.dashdive.internal.telemetry.ImmutableTelemetryItem;
-import org.dashdive.internal.telemetry.TelemetryEvent;
-import org.dashdive.internal.telemetry.TelemetryPayload;
+import com.dashdive.Dashdive;
+import com.dashdive.internal.batching.SingleEventBatcher;
+import com.dashdive.internal.telemetry.ExceptionUtil;
+import com.dashdive.internal.telemetry.ImmutableTelemetryEvent;
+import com.dashdive.internal.telemetry.ImmutableTelemetryItem;
+import com.dashdive.internal.telemetry.TelemetryEvent;
+import com.dashdive.internal.telemetry.TelemetryPayload;
 import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

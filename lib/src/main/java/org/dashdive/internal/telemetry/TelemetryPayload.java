@@ -1,4 +1,4 @@
-package org.dashdive.internal.telemetry;
+package com.dashdive.internal.telemetry;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableList;

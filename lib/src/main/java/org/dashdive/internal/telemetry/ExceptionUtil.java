@@ -1,4 +1,4 @@
-package org.dashdive.internal.telemetry;
+package com.dashdive.internal.telemetry;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public class ExceptionUtil {
   private static final ImmutableSet<String> STACK_TRACE_PREFIX_WHITELIST =
-      ImmutableSet.of("software.amazon.awssdk", "org.dashdive");
+      ImmutableSet.of("software.amazon.awssdk", "com.dashdive");
 
   private static ImmutableList<ImmutableMap<String, String>> getSanitizedStack(
       Throwable exception) {

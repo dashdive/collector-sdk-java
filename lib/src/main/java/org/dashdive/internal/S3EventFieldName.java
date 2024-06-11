@@ -1,4 +1,4 @@
-package org.dashdive.internal;
+package com.dashdive.internal;
 
 public class S3EventFieldName {
   public static final String ACTION_TYPE = "action";

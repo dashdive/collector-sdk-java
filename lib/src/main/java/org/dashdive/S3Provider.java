@@ -1,4 +1,4 @@
-package org.dashdive;
+package com.dashdive;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;

@@ -1,4 +1,4 @@
-package org.dashdive;
+package com.dashdive;
 
 // Each extractor will be created an called for exactly one
 // batch of events. Note that it is expected for multiple

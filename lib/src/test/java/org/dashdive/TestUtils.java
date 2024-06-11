@@ -1,4 +1,4 @@
-package org.dashdive;
+package com.dashdive;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -24,8 +24,8 @@ import java.util.concurrent.Flow;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLSession;
-import org.dashdive.internal.extraction.S3RoundTripExtractor;
-import org.dashdive.internal.telemetry.EventPipelineMetrics;
+import com.dashdive.internal.extraction.S3RoundTripExtractor;
+import com.dashdive.internal.telemetry.EventPipelineMetrics;
 import org.immutables.value.Value;
 import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;

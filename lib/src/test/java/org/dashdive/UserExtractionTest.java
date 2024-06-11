@@ -1,15 +1,15 @@
-package org.dashdive;
+package com.dashdive;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.dashdive.internal.DashdiveConnection;
-import org.dashdive.internal.ImmutableDashdiveInstanceInfo;
-import org.dashdive.internal.ImmutableSetupDefaults;
-import org.dashdive.internal.SetupDefaults;
-import org.dashdive.internal.extraction.S3RoundTripInterceptor;
-import org.dashdive.internal.telemetry.TelemetryPayload;
+import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
+import com.dashdive.internal.ImmutableSetupDefaults;
+import com.dashdive.internal.SetupDefaults;
+import com.dashdive.internal.extraction.S3RoundTripInterceptor;
+import com.dashdive.internal.telemetry.TelemetryPayload;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

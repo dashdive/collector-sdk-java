@@ -98,7 +98,7 @@ index 291bdf5..44b6b66 100644
  import java.util.Optional;
  import java.util.concurrent.CompletableFuture;
  import java.util.concurrent.ConcurrentHashMap;
-@@ -28,9 +27,7 @@ import org.dashdive.internal.telemetry.TelemetryPayload;
+@@ -28,9 +27,7 @@ import com.dashdive.internal.telemetry.TelemetryPayload;
  import org.immutables.value.Value;
  import org.slf4j.Logger;
  import org.slf4j.LoggerFactory;
@@ -183,8 +183,8 @@ diff --git a/app/src/test/java/org/dashdive/ErrorsTelemetryTest.java b/app/src/t
 index 342a7b0..091ee17 100644
 --- a/app/src/test/java/org/dashdive/ErrorsTelemetryTest.java
 +++ b/app/src/test/java/org/dashdive/ErrorsTelemetryTest.java
-@@ -15,6 +15,7 @@ import org.dashdive.internal.SetupDefaults;
- import org.dashdive.internal.telemetry.TelemetryPayload;
+@@ -15,6 +15,7 @@ import com.dashdive.internal.SetupDefaults;
+ import com.dashdive.internal.telemetry.TelemetryPayload;
  import org.junit.jupiter.api.Assertions;
  import org.junit.jupiter.api.Test;
 +import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -210,16 +210,16 @@ index bc2cac4..0000000
 --- a/app/src/test/java/org/dashdive/InterceptorIdempotencyTest.java
 +++ /dev/null
 @@ -1,116 +0,0 @@
--package org.dashdive;
+-package com.dashdive;
 -
 -import java.util.List;
 -import java.util.Map;
 -import java.util.Optional;
--import org.dashdive.internal.ImmutableDashdiveInstanceInfo;
--import org.dashdive.internal.ImmutableSetupDefaults;
--import org.dashdive.internal.SetupDefaults;
--import org.dashdive.internal.extraction.S3RoundTripInterceptor;
--import org.dashdive.internal.telemetry.TelemetryPayload;
+-import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
+-import com.dashdive.internal.ImmutableSetupDefaults;
+-import com.dashdive.internal.SetupDefaults;
+-import com.dashdive.internal.extraction.S3RoundTripInterceptor;
+-import com.dashdive.internal.telemetry.TelemetryPayload;
 -import org.junit.jupiter.api.Assertions;
 -import org.junit.jupiter.api.Test;
 -import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
