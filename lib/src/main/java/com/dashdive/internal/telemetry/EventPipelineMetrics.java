@@ -80,8 +80,9 @@ public class EventPipelineMetrics {
       final HttpRequest metricsRequest =
           HttpRequest.newBuilder()
               .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_METRICS))
-              .header(DashdiveConnection.Headers.USER_AGENT, userAgent)
-              .header(DashdiveConnection.Headers.API_KEY, apiKey)
+              .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+              .header(DashdiveConnection.Headers.KEY__USER_AGENT, userAgent)
+              .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
               .build();
       DashdiveConnection.send(httpClient, metricsRequest);

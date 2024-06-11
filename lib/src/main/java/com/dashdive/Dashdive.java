@@ -216,13 +216,14 @@ public class Dashdive implements AutoCloseable {
       final HttpRequest shutdownTelemetryRequest =
           HttpRequest.newBuilder()
               .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE))
+              .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
               .header(
-                  DashdiveConnection.Headers.USER_AGENT,
+                  DashdiveConnection.Headers.KEY__USER_AGENT,
                   DashdiveConnection.Headers.getUserAgent(
                       instanceInfo.get().javaVersion(),
                       Optional.of(VERSION),
                       Optional.of(instanceId)))
-              .header(DashdiveConnection.Headers.API_KEY, apiKey)
+              .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
               .build();
       DashdiveConnection.send(dashdiveHttpClient, shutdownTelemetryRequest);

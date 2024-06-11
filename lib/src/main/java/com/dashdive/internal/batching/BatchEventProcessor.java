@@ -272,8 +272,9 @@ public class BatchEventProcessor {
         final HttpRequest sendBatchRequest =
             HttpRequest.newBuilder()
                 .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.S3_BATCH_INGEST))
-                .header(DashdiveConnection.Headers.USER_AGENT, userAgent)
-                .header(DashdiveConnection.Headers.API_KEY, apiKey)
+                .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+                .header(DashdiveConnection.Headers.KEY__USER_AGENT, userAgent)
+                .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(sendBatchBodyJson))
                 .build();
 
@@ -311,8 +312,9 @@ public class BatchEventProcessor {
                 .uri(
                     DashdiveConnection.getRoute(
                         DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES))
-                .header(DashdiveConnection.Headers.USER_AGENT, userAgent)
-                .header(DashdiveConnection.Headers.API_KEY, apiKey)
+                .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+                .header(DashdiveConnection.Headers.KEY__USER_AGENT, userAgent)
+                .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(sendTelemetryBodyJson))
                 .build();
         DashdiveConnection.sendWithExponentialBackoff(

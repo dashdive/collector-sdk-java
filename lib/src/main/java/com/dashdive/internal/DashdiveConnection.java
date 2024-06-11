@@ -64,8 +64,10 @@ public class DashdiveConnection {
           instanceInfo.classInstanceId());
     }
 
-    public static final String API_KEY = "X-API-Key";
-    public static final String USER_AGENT = "User-Agent";
+    public static final String KEY__API_KEY = "X-API-Key";
+    public static final String KEY__USER_AGENT = "User-Agent";
+    public static final String KEY__CONTENT_TYPE = "Content-Type";
+    public static final String VAL__CONTENT_JSON = "application/json";
   }
 
   public static enum Route {

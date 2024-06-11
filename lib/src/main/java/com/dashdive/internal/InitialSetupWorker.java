@@ -96,8 +96,8 @@ public class InitialSetupWorker implements Runnable {
     final HttpRequest pingRequest =
         HttpRequest.newBuilder()
             .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.PING))
-            .header(DashdiveConnection.Headers.USER_AGENT, partialUserAgent)
-            .header(DashdiveConnection.Headers.API_KEY, apiKey)
+            .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
+            .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
             .GET()
             .build();
     try {
@@ -165,7 +165,8 @@ public class InitialSetupWorker implements Runnable {
         final HttpRequest invalidApiKeyRequest =
             HttpRequest.newBuilder()
                 .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_API_KEY))
-                .header(DashdiveConnection.Headers.USER_AGENT, partialUserAgent)
+                .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+                .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
                 // No API key header since, by virtue of this code path, there was an API key issue
                 .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
                 .build();
@@ -191,8 +192,8 @@ public class InitialSetupWorker implements Runnable {
     final HttpRequest targetBatchSizeRequest =
         HttpRequest.newBuilder()
             .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.S3_RECOMMENDED_BATCH_SIZE))
-            .header(DashdiveConnection.Headers.USER_AGENT, partialUserAgent)
-            .header(DashdiveConnection.Headers.API_KEY, apiKey)
+            .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
+            .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
             .GET()
             .build();
 
@@ -431,8 +432,9 @@ public class InitialSetupWorker implements Runnable {
       final HttpRequest startupTelemetryRequest =
           HttpRequest.newBuilder()
               .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE))
-              .header(DashdiveConnection.Headers.USER_AGENT, partialUserAgent)
-              .header(DashdiveConnection.Headers.API_KEY, apiKey)
+              .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+              .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
+              .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
               .build();
       DashdiveConnection.send(httpClient, startupTelemetryRequest);
