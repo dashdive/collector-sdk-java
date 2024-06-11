@@ -1,9 +1,8 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
-    application
-    java
-    maven-publish
+    `java-library`
+    `maven-publish`
 }
 
 repositories {
@@ -44,6 +43,10 @@ publishing {
                 }
             }
         }
+    }
+
+    repositories {
+        mavenLocal()
     }
 }
 

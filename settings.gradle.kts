@@ -11,4 +11,4 @@ plugins {
 }
 
 rootProject.name = "dashdive-sdk"
-include("app")
+include("lib")

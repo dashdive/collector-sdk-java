@@ -145,7 +145,7 @@ public class SingleEventBatcher {
 
   public static final int DEFAULT_TARGET_BATCH_SIZE = 100;
   private static final int EVENT_MAX_AGE_MS = 2000;
-  // `java -jar jol-cli-latest.jar internals -classpath app/build/classes/java/main
+  // `java -jar jol-cli-latest.jar internals -classpath lib/build/classes/java/main
   // org.dashdive.ImmutableS3SingleExtractedEvent`
   // Ballpark size of S3SingleExtractedEvent object:
   // - Contains 3 map fields (JOL gives total size 24 bytes)
