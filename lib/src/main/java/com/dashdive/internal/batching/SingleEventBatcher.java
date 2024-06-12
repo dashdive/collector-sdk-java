@@ -114,7 +114,7 @@ public class SingleEventBatcher {
   // From docs, unfortunately we shouldn't use core pool size 0 or keep alive times
   // with ScheduledThreadPoolExecutor, which means automatic shutdown is impossible.
   // https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ScheduledThreadPoolExecutor.html
-  private static final int EXECUTOR_CORE_POOL_SIZE = 0;
+  private static final int EXECUTOR_CORE_POOL_SIZE = 1;
   private final ScheduledThreadPoolExecutor allThreadsTimer;
 
   private final ConcurrentHashMap<Long, List<S3SingleExtractedEvent>> batchesByThread;

@@ -21,7 +21,7 @@ public class EventPipelineMetrics {
   private final ImmutableMap<Type, Metric> metrics;
   private final Lock metricsLock;
 
-  private static final int EXECUTOR_CORE_POOL_SIZE = 0;
+  private static final int EXECUTOR_CORE_POOL_SIZE = 1;
   private final ScheduledThreadPoolExecutor periodicSender;
   private Optional<ScheduledFuture<Void>> periodicSenderFuture;
   private static final int MAX_INCREMENTAL_METRICS_DELAY_SEC = 5;
