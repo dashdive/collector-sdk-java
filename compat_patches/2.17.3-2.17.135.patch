@@ -58,10 +58,10 @@ index ff0d152..003fab4 100644
  java {
      toolchain {
          languageVersion = JavaLanguageVersion.of(21)
-diff --git a/app/src/main/java/org/dashdive/Dashdive.java b/app/src/main/java/org/dashdive/Dashdive.java
+diff --git a/lib/src/main/java/com/dashdive/Dashdive.java b/lib/src/main/java/com/dashdive/Dashdive.java
 index 7e75861..e00fc34 100644
---- a/app/src/main/java/org/dashdive/Dashdive.java
-+++ b/app/src/main/java/org/dashdive/Dashdive.java
+--- a/lib/src/main/java/com/dashdive/Dashdive.java
++++ b/lib/src/main/java/com/dashdive/Dashdive.java
 @@ -247,18 +247,11 @@ public class Dashdive implements AutoCloseable {
  
    // Once this method is called on the `clientBuilder`, the caller should not
@@ -86,10 +86,10 @@ index 7e75861..e00fc34 100644
    }
  
    @VisibleForTesting
-diff --git a/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java b/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java
+diff --git a/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java b/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java
 index 291bdf5..44b6b66 100644
---- a/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java
-+++ b/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java
+--- a/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java
++++ b/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java
 @@ -8,7 +8,6 @@ import java.net.HttpURLConnection;
  import java.net.http.HttpClient;
  import java.net.http.HttpRequest;
@@ -153,10 +153,10 @@ index 291bdf5..44b6b66 100644
      executor.shutdown();
  
      return ImmutableGetAwsImdsDataResult.builder()
-diff --git a/app/src/main/java/org/dashdive/internal/extraction/S3RoundTripInterceptor.java b/app/src/main/java/org/dashdive/internal/extraction/S3RoundTripInterceptor.java
+diff --git a/lib/src/main/java/com/dashdive/internal/extraction/S3RoundTripInterceptor.java b/lib/src/main/java/com/dashdive/internal/extraction/S3RoundTripInterceptor.java
 index 4c0437f..ec8a24b 100644
---- a/app/src/main/java/org/dashdive/internal/extraction/S3RoundTripInterceptor.java
-+++ b/app/src/main/java/org/dashdive/internal/extraction/S3RoundTripInterceptor.java
+--- a/lib/src/main/java/com/dashdive/internal/extraction/S3RoundTripInterceptor.java
++++ b/lib/src/main/java/com/dashdive/internal/extraction/S3RoundTripInterceptor.java
 @@ -64,8 +64,8 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
      // We correlate the successful enqueueing of each event across `onExecutionFailure`
      // and `afterExecution` to ensure it's only done once per event.
@@ -179,10 +179,10 @@ index 4c0437f..ec8a24b 100644
        if (hasSentPayload) {
          return true;
        }
-diff --git a/app/src/test/java/org/dashdive/ErrorsTelemetryTest.java b/app/src/test/java/org/dashdive/ErrorsTelemetryTest.java
+diff --git a/lib/src/test/java/com/dashdive/ErrorsTelemetryTest.java b/lib/src/test/java/com/dashdive/ErrorsTelemetryTest.java
 index 342a7b0..091ee17 100644
---- a/app/src/test/java/org/dashdive/ErrorsTelemetryTest.java
-+++ b/app/src/test/java/org/dashdive/ErrorsTelemetryTest.java
+--- a/lib/src/test/java/com/dashdive/ErrorsTelemetryTest.java
++++ b/lib/src/test/java/com/dashdive/ErrorsTelemetryTest.java
 @@ -15,6 +15,7 @@ import com.dashdive.internal.SetupDefaults;
  import com.dashdive.internal.telemetry.TelemetryPayload;
  import org.junit.jupiter.api.Assertions;
@@ -204,10 +204,10 @@ index 342a7b0..091ee17 100644
  
      final String uuid = "bac79f5b-a302-4ad9-af79-6bf96f9446be";
      final HeadBucketRequest headBucketRequest =
-diff --git a/app/src/test/java/org/dashdive/InterceptorIdempotencyTest.java b/app/src/test/java/org/dashdive/InterceptorIdempotencyTest.java
+diff --git a/lib/src/test/java/com/dashdive/InterceptorIdempotencyTest.java b/lib/src/test/java/com/dashdive/InterceptorIdempotencyTest.java
 deleted file mode 100644
 index bc2cac4..0000000
---- a/app/src/test/java/org/dashdive/InterceptorIdempotencyTest.java
+--- a/lib/src/test/java/com/dashdive/InterceptorIdempotencyTest.java
 +++ /dev/null
 @@ -1,116 +0,0 @@
 -package com.dashdive;

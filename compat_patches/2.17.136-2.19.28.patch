@@ -58,10 +58,10 @@ index ff0d152..7063d9d 100644
  java {
      toolchain {
          languageVersion = JavaLanguageVersion.of(21)
-diff --git a/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java b/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java
+diff --git a/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java b/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java
 index 291bdf5..44b6b66 100644
---- a/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java
-+++ b/app/src/main/java/org/dashdive/internal/InitialSetupWorker.java
+--- a/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java
++++ b/lib/src/main/java/com/dashdive/internal/InitialSetupWorker.java
 @@ -8,7 +8,6 @@ import java.net.HttpURLConnection;
  import java.net.http.HttpClient;
  import java.net.http.HttpRequest;
@@ -125,10 +125,10 @@ index 291bdf5..44b6b66 100644
      executor.shutdown();
  
      return ImmutableGetAwsImdsDataResult.builder()
-diff --git a/app/src/test/java/org/dashdive/InterceptorIdempotencyTest.java b/app/src/test/java/org/dashdive/InterceptorIdempotencyTest.java
+diff --git a/lib/src/test/java/com/dashdive/InterceptorIdempotencyTest.java b/lib/src/test/java/com/dashdive/InterceptorIdempotencyTest.java
 deleted file mode 100644
 index bc2cac4..0000000
---- a/app/src/test/java/org/dashdive/InterceptorIdempotencyTest.java
+--- a/lib/src/test/java/com/dashdive/InterceptorIdempotencyTest.java
 +++ /dev/null
 @@ -1,116 +0,0 @@
 -package com.dashdive;
