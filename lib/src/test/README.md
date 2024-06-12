@@ -26,6 +26,25 @@ Since we've tested core functionality via unit tests, the only functionality rem
 1. That `EC2MetadataClient` invocations behave expectedly, whether or not we're running on an EC2 instance (including proper setting of the `isBillableEgress` field)
 1. All requests made to `S3Client` are sent roughly within "max age" time (test when less than a full batch size of requests is made)
 
-For now, these tests are done manually. Nonetheless, the Java programs and dummy ingest servers used to run the tests, both on and off an EC2 instance, will be implemented in the integration tests folder.
+For maximum consistency, we use the built and distributed version of the library. This means using a debug backdoor (`DashdiveConnection._setIngestBaseUri`) to override the ingestion endpoint from `ingest.dashdive.com` to a local URL where all the received payloads are logged or printed.
 
-For maximum consistency, we should actually use the built and distributed version of the library. This means adding a debug backdoor to override the ingestion endpoint from `ingest.dashdive.com` to some local URL where all the received payloads are logged or printed.
+For now, these tests are done manually. Nonetheless, the Java programs and dummy ingest servers used to run the tests, both on and off an EC2 instance, are implemented in the integration tests folder.
+
+### Running Locally
+
+```bash
+./test-run.sh local
+```
+
+### Running in EC2
+
+- Create an EC2 instance in the `us-west-2` region with an SSH key called `sdk-test.pem`
+- Ensure the `sdk-test.pem` key is in the `integration_test` directory
+
+**IMPORTANT NOTE:** Running `./test-setup.sh` will copy your AWS credentials via `aws configure` and put them in the `.bashrc` on the EC2 instance.
+
+```bash
+./test-setup.sh <ec2_ip>
+ssh -i sdk-test.pem admin@<ec2_ip>
+./test-run.sh cloud # From inside EC2 instance
+```

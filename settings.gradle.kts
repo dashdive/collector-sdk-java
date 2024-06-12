@@ -12,3 +12,4 @@ plugins {
 
 rootProject.name = "dashdive-sdk"
 include("lib")
+include("integration_test:client")
