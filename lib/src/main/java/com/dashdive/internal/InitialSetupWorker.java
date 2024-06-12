@@ -6,16 +6,21 @@ import com.dashdive.internal.telemetry.ExceptionUtil;
 import com.dashdive.internal.telemetry.ImmutableTelemetryEvent;
 import com.dashdive.internal.telemetry.ImmutableTelemetryItem;
 import com.dashdive.internal.telemetry.TelemetryEvent;
+import com.dashdive.internal.telemetry.TelemetryItem;
 import com.dashdive.internal.telemetry.TelemetryPayload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.MultimapBuilder;
+import com.google.common.collect.Multimaps;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -165,7 +170,9 @@ public class InitialSetupWorker implements Runnable {
         final HttpRequest invalidApiKeyRequest =
             HttpRequest.newBuilder()
                 .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_API_KEY))
-                .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+                .header(
+                    DashdiveConnection.Headers.KEY__CONTENT_TYPE,
+                    DashdiveConnection.Headers.VAL__CONTENT_JSON)
                 .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
                 // No API key header since, by virtue of this code path, there was an API key issue
                 .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
@@ -268,8 +275,9 @@ public class InitialSetupWorker implements Runnable {
     final ExecutorService executor = Executors.newFixedThreadPool(maxImdsRequestConcurrency);
 
     final ConcurrentMap<String, String> valuesByField = new ConcurrentHashMap<>();
-    final ConcurrentMap<String, ImmutableList<ImmutableMap<String, Object>>>
-        exceptionPayloadsByField = new ConcurrentHashMap<>();
+    final ConcurrentMap<String, Exception> exceptionsByField = new ConcurrentHashMap<>();
+    final ListMultimap<String, String> fieldsByExceptionChainsWithoutStacks =
+        Multimaps.synchronizedListMultimap(MultimapBuilder.hashKeys().arrayListValues().build());
     final ImmutableList<CompletableFuture<Void>> futures =
         imdsDataFieldPaths.stream()
             .map(
@@ -281,9 +289,9 @@ public class InitialSetupWorker implements Runnable {
                                 client.get(IMDS_BASE_PATH + imdsDataFieldPath);
                             valuesByField.put(imdsDataFieldPath, response.asString());
                           } catch (Exception exception) {
-                            exceptionPayloadsByField.put(
-                                imdsDataFieldPath,
-                                ExceptionUtil.getSerializableExceptionData(exception));
+                            exceptionsByField.put(imdsDataFieldPath, exception);
+                            fieldsByExceptionChainsWithoutStacks.put(
+                                ExceptionUtil.getChainWithoutStacks(exception), imdsDataFieldPath);
                           }
                         },
                         executor))
@@ -293,36 +301,38 @@ public class InitialSetupWorker implements Runnable {
     client.close();
     executor.shutdown();
 
+    final ImmutableDashdiveInstanceInfo instanceInfo =
+        ImmutableDashdiveInstanceInfo.builder()
+            .imdAmiId(Optional.ofNullable(valuesByField.get(IMDSDataField.AMI_ID)))
+            .imdAvailabilityZone(
+                Optional.ofNullable(valuesByField.get(IMDSDataField.AVAILABILITY_ZONE)))
+            .imdAvailabilityZoneId(
+                Optional.ofNullable(valuesByField.get(IMDSDataField.AVAILABILITY_ZONE_ID)))
+            .imdEc2InstanceId(Optional.ofNullable(valuesByField.get(IMDSDataField.INSTANCE_ID)))
+            .imdInstanceType(Optional.ofNullable(valuesByField.get(IMDSDataField.INSTANCE_TYPE)))
+            .imdKernelId(Optional.ofNullable(valuesByField.get(IMDSDataField.KERNEL_ID)))
+            .imdPublicIpv4(Optional.ofNullable(valuesByField.get(IMDSDataField.PUBLIC_IPV4)))
+            .imdRegion(Optional.ofNullable(valuesByField.get(IMDSDataField.REGION)))
+            .build();
+    final List<TelemetryItem> telemetryItems =
+        fieldsByExceptionChainsWithoutStacks.asMap().values().stream()
+            .map(fieldsWithSameException -> (List<String>) fieldsWithSameException)
+            .map(
+                fieldsWithSameException ->
+                    ImmutableTelemetryItem.builder()
+                        .type("IMDS_ISSUE")
+                        .data(
+                            ImmutableMap.of(
+                                "fields",
+                                fieldsWithSameException,
+                                "exception",
+                                ExceptionUtil.getSerializableExceptionData(
+                                    exceptionsByField.get(fieldsWithSameException.getFirst()))))
+                        .build())
+            .collect(ImmutableList.toImmutableList());
     return ImmutableGetAwsImdsDataResult.builder()
-        .imdsData(
-            ImmutableDashdiveInstanceInfo.builder()
-                .imdAmiId(Optional.ofNullable(valuesByField.get(IMDSDataField.AMI_ID)))
-                .imdAvailabilityZone(
-                    Optional.ofNullable(valuesByField.get(IMDSDataField.AVAILABILITY_ZONE)))
-                .imdAvailabilityZoneId(
-                    Optional.ofNullable(valuesByField.get(IMDSDataField.AVAILABILITY_ZONE_ID)))
-                .imdEc2InstanceId(Optional.ofNullable(valuesByField.get(IMDSDataField.INSTANCE_ID)))
-                .imdInstanceType(
-                    Optional.ofNullable(valuesByField.get(IMDSDataField.INSTANCE_TYPE)))
-                .imdKernelId(Optional.ofNullable(valuesByField.get(IMDSDataField.KERNEL_ID)))
-                .imdPublicIpv4(Optional.ofNullable(valuesByField.get(IMDSDataField.PUBLIC_IPV4)))
-                .imdRegion(Optional.ofNullable(valuesByField.get(IMDSDataField.REGION)))
-                .build())
-        .telemetryWarnings(
-            TelemetryPayload.from(
-                exceptionPayloadsByField.entrySet().stream()
-                    .map(
-                        fieldAndException ->
-                            ImmutableTelemetryItem.builder()
-                                .type("IMDS_ISSUE")
-                                .data(
-                                    ImmutableMap.of(
-                                        "field",
-                                        fieldAndException.getKey(),
-                                        "exception",
-                                        fieldAndException.getValue()))
-                                .build())
-                    .collect(ImmutableList.toImmutableList())))
+        .imdsData(instanceInfo)
+        .telemetryWarnings(TelemetryPayload.from(telemetryItems))
         .build();
   }
 
@@ -432,7 +442,9 @@ public class InitialSetupWorker implements Runnable {
       final HttpRequest startupTelemetryRequest =
           HttpRequest.newBuilder()
               .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE))
-              .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+              .header(
+                  DashdiveConnection.Headers.KEY__CONTENT_TYPE,
+                  DashdiveConnection.Headers.VAL__CONTENT_JSON)
               .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
               .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))

@@ -330,9 +330,8 @@ public class InternalExtractionTest {
 
     final List<Map<String, Object>> telemetryErrors =
         (List<Map<String, Object>>) eventWithIssues.get("telemetryErrors");
-    Assertions.assertEquals(2, telemetryErrors.size());
-    Assertions.assertEquals("INFER_REQUIRED_FIELD_FAILURE", telemetryErrors.get(0).get("type"));
-    Assertions.assertEquals("uncaughtExtractionException", telemetryErrors.get(1).get("type"));
+    Assertions.assertEquals(1, telemetryErrors.size());
+    Assertions.assertEquals("uncaughtExtractionException", telemetryErrors.getFirst().get("type"));
   }
 
   @Test

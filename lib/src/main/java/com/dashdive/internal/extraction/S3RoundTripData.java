@@ -6,11 +6,13 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.immutables.value.Value;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.SdkResponse;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.SdkHttpResponse;
 
@@ -66,6 +68,26 @@ class SdkResponseSerializer extends StdSerializer<SdkResponse> {
   }
 }
 
+class RequestBodySerializer extends StdSerializer<Optional<RequestBody>> {
+  public RequestBodySerializer() {
+    super(Optional.class, true);
+  }
+
+  @Override
+  public void serialize(Optional<RequestBody> value, JsonGenerator gen, SerializerProvider provider)
+      throws IOException {
+    gen.writeStartObject();
+    if (value.isPresent()) {
+      final RequestBody requestBody = value.get();
+      gen.writeObjectField(
+          "contentType", requestBody.contentType() == null ? "" : requestBody.contentType());
+      gen.writeObjectField(
+          "optionalContentLength", requestBody.optionalContentLength().orElse(-1L));
+    }
+    gen.writeEndObject();
+  }
+}
+
 @Value.Immutable
 @JsonSerialize(as = ImmutableS3RoundTripData.class)
 public abstract class S3RoundTripData {
@@ -76,6 +98,9 @@ public abstract class S3RoundTripData {
   public abstract SdkResponse pojoResponse();
 
   public abstract SdkHttpRequest httpRequest();
+
+  @JsonSerialize(using = RequestBodySerializer.class)
+  public abstract Optional<RequestBody> requestBody();
 
   public abstract SdkHttpResponse httpResponse();
 }

@@ -7,8 +7,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.SdkResponse;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadResponse;
@@ -86,6 +89,8 @@ import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 public class S3DistinctEventDataExtractor {
+  private static final Logger logger = LoggerFactory.getLogger(S3DistinctEventDataExtractor.class);
+
   @VisibleForTesting
   public static final String _serializeRoundTripClassNames(
       String requestClassName, String responseClassName) {
@@ -277,6 +282,23 @@ public class S3DistinctEventDataExtractor {
     return ImmutableS3DistinctEventData.builder().actionType(S3ActionType.UNKNOWN).build();
   }
 
+  // Seems that it is not possible to stream request body in the S3 SDK for Java, so
+  // we should always be able to see the exact size from the request body object.
+  // See: https://stackoverflow.com/a/51252868/14816795
+  private static Long getContentLengthWithLogging(
+      Long nullableRequestContentLength,
+      Optional<RequestBody> requestBody,
+      S3ActionType actionType) {
+    if (nullableRequestContentLength != null) {
+      return nullableRequestContentLength;
+    }
+    if (requestBody.isPresent() && requestBody.get().optionalContentLength().isPresent()) {
+      return requestBody.get().optionalContentLength().get();
+    }
+    logger.error("Required size in bytes missing for action type: {}", actionType);
+    return null;
+  }
+
   public static S3DistinctEventData getFrom(S3RoundTripData roundTripData)
       throws ClassCastException, NoSuchElementException {
     // There are multiple names for a class, but `getName` is unique:
@@ -307,7 +329,8 @@ public class S3DistinctEventDataExtractor {
         distinctFields =
             extractDistinctFieldsForEventType_PutObject(
                 (PutObjectRequest) roundTripData.pojoRequest(),
-                (PutObjectResponse) roundTripData.pojoResponse());
+                (PutObjectResponse) roundTripData.pojoResponse(),
+                roundTripData.requestBody());
         break;
       case S3ActionType.COPY_OBJECT:
         distinctFields =
@@ -358,7 +381,8 @@ public class S3DistinctEventDataExtractor {
         distinctFields =
             extractDistinctFieldsForEventType_UploadPart(
                 (UploadPartRequest) roundTripData.pojoRequest(),
-                (UploadPartResponse) roundTripData.pojoResponse());
+                (UploadPartResponse) roundTripData.pojoResponse(),
+                roundTripData.requestBody());
         break;
       case S3ActionType.UPLOAD_PART_COPY:
         distinctFields =
@@ -443,13 +467,21 @@ public class S3DistinctEventDataExtractor {
   }
 
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_PutObject(
-      PutObjectRequest request, PutObjectResponse response) {
+      PutObjectRequest request, PutObjectResponse response, Optional<RequestBody> requestBody) {
     final String safeObjectVersionId = Optional.ofNullable(response.versionId()).orElse("");
+    final Long nullableContentLength =
+        getContentLengthWithLogging(request.contentLength(), requestBody, S3ActionType.PUT_OBJECT);
     return ImmutableMap.of(
-        S3EventFieldName.BUCKET_NAME, request.bucket(),
-        S3EventFieldName.OBJECT_KEY, request.key(),
-        S3EventFieldName.OBJECT_VERSION_ID, safeObjectVersionId,
-        S3EventFieldName.OBJECT_SIZE_BYTES, request.contentLength());
+        S3EventFieldName.BUCKET_NAME,
+        request.bucket(),
+        S3EventFieldName.OBJECT_KEY,
+        request.key(),
+        S3EventFieldName.OBJECT_VERSION_ID,
+        safeObjectVersionId,
+        // If null this will throw an error, but we want that because we want it
+        // to show up in our telemetry rather than being recorded as a valid event
+        S3EventFieldName.OBJECT_SIZE_BYTES,
+        nullableContentLength);
   }
 
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_CopyObject(
@@ -545,12 +577,14 @@ public class S3DistinctEventDataExtractor {
   }
 
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_UploadPart(
-      UploadPartRequest request, UploadPartResponse response) {
+      UploadPartRequest request, UploadPartResponse response, Optional<RequestBody> requestBody) {
+    final Long nullableContentLength =
+        getContentLengthWithLogging(request.contentLength(), requestBody, S3ActionType.PUT_OBJECT);
     return ImmutableMap.of(
         S3EventFieldName.BUCKET_NAME, request.bucket(),
         S3EventFieldName.MULTIPART_UPLOAD_ID, request.uploadId(),
         S3EventFieldName.MULTIPART_PART_NUMBER, request.partNumber(),
-        S3EventFieldName.OBJECT_SIZE_BYTES, request.contentLength());
+        S3EventFieldName.OBJECT_SIZE_BYTES, nullableContentLength);
   }
 
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_UploadPartCopy(

@@ -92,6 +92,10 @@ public class S3SingleEventProcessor {
       S3SingleExtractedEvent event,
       @Nullable S3EventAttributeExtractor s3EventAttributeExtractor,
       Optional<String> machineRegion) {
+    if (event.hasIrrecoverableErrors()) {
+      return event;
+    }
+
     final ImmutableMap<String, Object> dataPayload = event.dataPayload();
     final S3ActionType actionType =
         S3ActionType.safeValueOf(

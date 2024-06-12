@@ -73,7 +73,8 @@ public class Dashdive implements AutoCloseable {
   // "s3Client.serviceClientConfiguration().overrideConfiguration().executionInterceptors()
   //              .forEach(System.out::println);"
 
-  // Package-private instead of fully private for testing, to allow for mocked HTTP clients
+  // Constructors are package-private instead of fully private for testing,
+  // to allow for mocked HTTP clients
   Dashdive(
       String apiKey,
       Optional<S3EventAttributeExtractorFactory> s3EventAttributeExtractorFactory,
@@ -152,15 +153,22 @@ public class Dashdive implements AutoCloseable {
         false);
   }
 
-  @Builder.Constructor
-  protected Dashdive(
+  Dashdive(
       String apiKey,
+      Optional<S3EventAttributeExtractorFactory> s3EventAttributeExtractorFactory,
+      Optional<Duration> shutdownGracePeriod) {
+    this(Optional.of(apiKey), s3EventAttributeExtractorFactory, shutdownGracePeriod);
+  }
+
+  @Builder.Constructor
+  Dashdive(
+      Optional<String> apiKey,
       Optional<S3EventAttributeExtractorFactory> s3EventAttributeExtractorFactory,
       Optional<Duration> shutdownGracePeriod) {
     // No need to check the user-supplied values for null, since the Immutables
     // builder automatically enforces non-null
     this(
-        apiKey,
+        apiKey.orElse(""),
         s3EventAttributeExtractorFactory,
         shutdownGracePeriod,
         DashdiveConnection.directExecutorHttpClient(),
@@ -216,7 +224,9 @@ public class Dashdive implements AutoCloseable {
       final HttpRequest shutdownTelemetryRequest =
           HttpRequest.newBuilder()
               .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE))
-              .header(DashdiveConnection.Headers.KEY__CONTENT_TYPE, DashdiveConnection.Headers.VAL__CONTENT_JSON)
+              .header(
+                  DashdiveConnection.Headers.KEY__CONTENT_TYPE,
+                  DashdiveConnection.Headers.VAL__CONTENT_JSON)
               .header(
                   DashdiveConnection.Headers.KEY__USER_AGENT,
                   DashdiveConnection.Headers.getUserAgent(

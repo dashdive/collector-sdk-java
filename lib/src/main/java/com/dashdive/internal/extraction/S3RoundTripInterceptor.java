@@ -92,6 +92,7 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
                 ImmutableS3RoundTripData.builder()
                     .pojoRequest(context.request())
                     .pojoResponse(context.response().get())
+                    // TODO: There doesn't seem to be a way to get `requestBody` from `context`?
                     .httpRequest(context.httpRequest().get())
                     .httpResponse(context.httpResponse().get())
                     .build());
@@ -132,6 +133,7 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
               ImmutableS3RoundTripData.builder()
                   .pojoRequest(context.request())
                   .pojoResponse(context.response())
+                  .requestBody(context.requestBody())
                   .httpRequest(context.httpRequest())
                   .httpResponse(context.httpResponse())
                   .build());
