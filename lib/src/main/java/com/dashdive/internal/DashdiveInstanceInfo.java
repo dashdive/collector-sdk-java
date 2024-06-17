@@ -31,8 +31,6 @@ public abstract class DashdiveInstanceInfo {
 
   public abstract Optional<String> imdAmiId();
 
-  public abstract Optional<String> imdKernelId();
-
   public abstract Optional<String> imdInstanceType();
 
   public abstract Optional<OSDistroInfo> osDistroInfo();

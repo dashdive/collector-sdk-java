@@ -244,7 +244,6 @@ public class InitialSetupWorker implements Runnable {
     public static final String AVAILABILITY_ZONE_ID = "placement/availability-zone-id";
     public static final String PUBLIC_IPV4 = "public-ipv4";
     public static final String AMI_ID = "ami-id";
-    public static final String KERNEL_ID = "kernel-id";
     public static final String INSTANCE_TYPE = "instance-type";
   }
 
@@ -256,7 +255,6 @@ public class InitialSetupWorker implements Runnable {
           IMDSDataField.AVAILABILITY_ZONE_ID,
           IMDSDataField.PUBLIC_IPV4,
           IMDSDataField.AMI_ID,
-          IMDSDataField.KERNEL_ID,
           IMDSDataField.INSTANCE_TYPE);
 
   private static GetAwsImdsDataResult getAwsImdsData() {
@@ -310,7 +308,6 @@ public class InitialSetupWorker implements Runnable {
                 Optional.ofNullable(valuesByField.get(IMDSDataField.AVAILABILITY_ZONE_ID)))
             .imdEc2InstanceId(Optional.ofNullable(valuesByField.get(IMDSDataField.INSTANCE_ID)))
             .imdInstanceType(Optional.ofNullable(valuesByField.get(IMDSDataField.INSTANCE_TYPE)))
-            .imdKernelId(Optional.ofNullable(valuesByField.get(IMDSDataField.KERNEL_ID)))
             .imdPublicIpv4(Optional.ofNullable(valuesByField.get(IMDSDataField.PUBLIC_IPV4)))
             .imdRegion(Optional.ofNullable(valuesByField.get(IMDSDataField.REGION)))
             .build();
