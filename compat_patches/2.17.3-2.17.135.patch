@@ -1,7 +1,7 @@
-diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+diff --git a/lib/build.gradle.kts b/lib/build.gradle.kts
 index ff0d152..003fab4 100644
---- a/app/build.gradle.kts
-+++ b/app/build.gradle.kts
+--- a/lib/build.gradle.kts
++++ b/lib/build.gradle.kts
 @@ -9,7 +9,7 @@ repositories {
      mavenCentral()
  }
