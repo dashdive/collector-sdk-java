@@ -5,6 +5,9 @@ import com.dashdive.ImmutableS3EventAttributes;
 import com.dashdive.S3EventAttributeExtractorFactory;
 import com.dashdive.internal.DashdiveConnection;
 import java.net.URI;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -13,8 +16,14 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateBucketConfiguration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteBucketResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -27,6 +36,8 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 /*
  * We test the following cases:
@@ -144,9 +155,11 @@ class BucketTester {
 
   private static final String objectKey1 = "java_payload1.txt";
   private static final String objectKey2 = "java_payload2.txt";
+  private static final String multipartObjectKey = "multipart.txt";
 
   private static final String objectContent1 = "abc";
   private static final String objectContent2 = "wxyz";
+  private static final String multipartFinalContents = "END";
 
   private static final String expectedCombinedContent =
       (objectContent1 + objectContent2).toUpperCase();
@@ -225,6 +238,31 @@ class BucketTester {
           bucketRegion.toString());
     }
 
+    final Path multipartContents = Path.of(ClassLoader.getSystemClassLoader().getResource("multipart.txt").getPath());
+    uploadStringsInParts(
+        s3Client, bucketName, multipartObjectKey, multipartContents, multipartFinalContents);
+    final String downloadedMultipartContent =
+        downloadString(s3Client, bucketName, multipartObjectKey);
+    final boolean hasCorrectEnd = downloadedMultipartContent.endsWith(multipartFinalContents);
+    // `multipart.txt` has 211,000 lines of "abcdefghijklmnopqrstuvwxyz", plus newlines
+    final boolean hasCorrectLength =
+        downloadedMultipartContent.length() == 211_000 * 27 + multipartFinalContents.length();
+    if (!hasCorrectEnd || !hasCorrectLength) {
+      logger.error(
+          "[Bucket {}, {}] Downloaded multipart object MISMATCH: hasCorrectEnd={},"
+              + " hasCorrectLength={}",
+          bucketName,
+          bucketRegion.toString(),
+          hasCorrectEnd,
+          hasCorrectLength);
+    } else {
+      logger.info(
+          "[Bucket {}, {}] Downloaded multipart object matches expected values",
+          bucketName,
+          bucketRegion.toString());
+    }
+    deleteObject(s3Client, bucketName, multipartObjectKey);
+
     deleteBucket(s3Client, bucketName);
     logger.info("[Bucket {}, {}] Deleted bucket", bucketName, bucketRegion.toString());
   }
@@ -244,6 +282,44 @@ class BucketTester {
     return s3Client.putObject(
         PutObjectRequest.builder().bucket(bucketName).key(objectKey).build(),
         RequestBody.fromString(content));
+  }
+
+  private static CompleteMultipartUploadResponse uploadStringsInParts(
+      S3Client s3Client,
+      String bucketName,
+      String objectKey,
+      Path mainContent,
+      String finalContent) {
+    final CreateMultipartUploadResponse createMultipartResponse =
+        s3Client.createMultipartUpload(
+            CreateMultipartUploadRequest.builder().bucket(bucketName).key(objectKey).build());
+    final String uploadId = createMultipartResponse.uploadId();
+
+    final List<RequestBody> contents = new ArrayList<>();
+    contents.add(RequestBody.fromFile(mainContent));
+    contents.add(RequestBody.fromString(finalContent));
+
+    final List<CompletedPart> completedParts = new ArrayList<>();
+    for (int i = 0; i < contents.size(); i++) {
+      final UploadPartResponse response =
+          s3Client.uploadPart(
+              UploadPartRequest.builder()
+                  .bucket(bucketName)
+                  .key(objectKey)
+                  .uploadId(uploadId)
+                  .partNumber(i + 1)
+                  .build(),
+              contents.get(i));
+      completedParts.add(CompletedPart.builder().partNumber(i + 1).eTag(response.eTag()).build());
+    }
+
+    return s3Client.completeMultipartUpload(
+        CompleteMultipartUploadRequest.builder()
+            .bucket(bucketName)
+            .key(objectKey)
+            .uploadId(uploadId)
+            .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build())
+            .build());
   }
 
   private static String downloadString(S3Client s3Client, String bucketName, String objectKey) {

@@ -1,7 +1,8 @@
 import express from "express";
 import bodyParser from "body-parser";
-import argparse from "argparse";
+import { ArgumentParser } from "argparse";
 import fs from "fs";
+import path from "path";
 
 const app = express();
 const defaultPort = 3232;
@@ -23,7 +24,7 @@ function validPort(port: string): number {
   return portNumber;
 }
 
-const parser = new argparse.ArgumentParser({
+const parser = new ArgumentParser({
   description: "Mock usage collector server.",
 });
 parser.add_argument("-p", "--port", {
@@ -45,7 +46,7 @@ app.use(bodyParser.json({ strict: false }));
 
 function getOutputRequestObject(req: express.Request): object {
   return {
-    request: {
+    route: {
       method: req.method,
       path: req.path,
     },
@@ -81,7 +82,11 @@ function formatJson(json: any): string {
 process.on("SIGTERM", () => {
   console.log("SIGTERM signal received: writing logs and closing HTTP server");
 
+  const absoluteFilePath = path.resolve(filePath);
+  console.log(`Writing request logs to: ${absoluteFilePath}`);
+
   const content = formatJson(requestObjects);
+  fs.mkdirSync(path.dirname(absoluteFilePath), { recursive: true });
   fs.writeFileSync(filePath, content);
 
   server.close(() => {

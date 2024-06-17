@@ -33,3 +33,14 @@ dependencies {
 task("formatSource", Exec::class) {
     commandLine("sh", "-c", "find src -name \"*.java\" -exec google-java-format -r {} +")
 }
+
+tasks.register("generateMultipartTextFile") {
+    doLast {
+        exec {
+            commandLine("bash", "generate_multipart.sh", "src/main/resources/multipart.txt", "211000")
+        }
+    }
+}
+tasks.named("run") {
+    dependsOn("generateMultipartTextFile")
+}

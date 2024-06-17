@@ -50,7 +50,7 @@ ssh -T -i sdk-test.pem admin@$EC2_URI << 'EOF' | sed -e '1,/applicable law/d'
   fi
 
   curl -fsSL https://get.pnpm.io/install.sh | sh -
-  pnpm install -g typescript ts-node
+  bash -ic "source /home/admin/.bashrc && pnpm install -g typescript ts-node"
 EOF
 
 

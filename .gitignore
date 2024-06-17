@@ -2,3 +2,4 @@
 **/build
 **/.DS_Store
 **/*.pem
+integration_test/client/src/main/resources/multipart.txt
