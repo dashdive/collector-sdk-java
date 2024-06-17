@@ -50,7 +50,7 @@ publishing {
     }
 }
 
-val awsJavaSdkVersion = "2.19.29"
+val awsJavaSdkVersion = "2.20.32"
 dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -123,9 +123,6 @@ java {
 
 task("formatSource", Exec::class) {
     commandLine("sh", "-c", "find src -name \"*.java\" -exec google-java-format -r {} +")
-}
-tasks.named("build") {
-    dependsOn("formatSource")
 }
 
 tasks.named<Test>("test") {
