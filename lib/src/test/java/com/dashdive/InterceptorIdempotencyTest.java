@@ -59,8 +59,10 @@ public class InterceptorIdempotencyTest {
         S3Client.builder()
             .region(Region.US_WEST_1)
             .overrideConfiguration(combinedOverrideConfigurationBuilder.build());
-    combinedS3ClientBuilder = dashdive.withInstrumentation(combinedS3ClientBuilder);
-    combinedS3ClientBuilder = dashdive.withInstrumentation(combinedS3ClientBuilder);
+    combinedS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
+    combinedS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
     final S3Client combinedS3Client = combinedS3ClientBuilder.build();
 
     ClientOverrideConfiguration.Builder interceptorOverrideConfigurationBuilder =
@@ -76,8 +78,10 @@ public class InterceptorIdempotencyTest {
             .build();
 
     S3ClientBuilder instrumentationS3ClientBuilder = S3Client.builder().region(Region.EU_CENTRAL_1);
-    instrumentationS3ClientBuilder = dashdive.withInstrumentation(instrumentationS3ClientBuilder);
-    instrumentationS3ClientBuilder = dashdive.withInstrumentation(instrumentationS3ClientBuilder);
+    instrumentationS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
+    instrumentationS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
     final S3Client instrumentationS3Client = instrumentationS3ClientBuilder.build();
 
     final List<ExecutionInterceptor> combinedList =
@@ -100,13 +104,13 @@ public class InterceptorIdempotencyTest {
                 .executionInterceptors());
 
     Assertions.assertEquals(1, combinedList.size());
-    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, combinedList.getFirst());
+    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, combinedList.get(0));
 
     Assertions.assertEquals(1, interceptorList.size());
-    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, interceptorList.getFirst());
+    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, interceptorList.get(0));
 
     Assertions.assertEquals(1, instrumentationList.size());
-    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, instrumentationList.getFirst());
+    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, instrumentationList.get(0));
 
     combinedS3Client.close();
     interceptorS3Client.close();

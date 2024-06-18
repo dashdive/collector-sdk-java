@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.regions.Region;
@@ -87,22 +88,24 @@ public class Main {
     final String accessKeyId = System.getenv("AWS_ACCESS_KEY_ID");
     final String secretAccessKey = System.getenv("AWS_SECRET_ACCESS_KEY");
     final S3Client s3ClientSameRegion =
-        dashdive
-            .withInstrumentation(S3Client.builder())
+        S3Client.builder()
             // We assume this EC2 instance is in the same region as the one specified here
             .region(SAME_REGION_BUCKET_REGION)
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
+            .overrideConfiguration(
+                dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
             .build();
 
     final S3Client s3ClientDifferentRegion =
-        dashdive
-            .withInstrumentation(S3Client.builder())
+        S3Client.builder()
             .region(DIFFERENT_REGION_BUCKET_REGION)
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
+            .overrideConfiguration(
+                dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
             .build();
 
     final Runnable sameRegionBucketTask1 =
@@ -238,7 +241,8 @@ class BucketTester {
           bucketRegion.toString());
     }
 
-    final Path multipartContents = Path.of(ClassLoader.getSystemClassLoader().getResource("multipart.txt").getPath());
+    final Path multipartContents =
+        Path.of(ClassLoader.getSystemClassLoader().getResource("multipart.txt").getPath());
     uploadStringsInParts(
         s3Client, bucketName, multipartObjectKey, multipartContents, multipartFinalContents);
     final String downloadedMultipartContent =

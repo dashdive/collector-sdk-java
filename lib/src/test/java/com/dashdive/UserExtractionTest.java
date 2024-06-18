@@ -110,10 +110,9 @@ public class UserExtractionTest {
             .collect(Collectors.toList());
 
     Assertions.assertEquals(1, extractionIssuesReqBodies.size());
-    Assertions.assertTrue(extractionIssuesReqBodies.getFirst().isPresent());
+    Assertions.assertTrue(extractionIssuesReqBodies.get(0).isPresent());
 
-    assertWarningInAllExtractionIssues(
-        List.of(extractionIssuesReqBodies.getFirst().get()), BATCH_SIZE);
+    assertWarningInAllExtractionIssues(List.of(extractionIssuesReqBodies.get(0).get()), BATCH_SIZE);
   }
 
   @Test
@@ -162,10 +161,9 @@ public class UserExtractionTest {
             .collect(Collectors.toList());
 
     Assertions.assertEquals(1, extractionIssuesReqBodies.size());
-    Assertions.assertTrue(extractionIssuesReqBodies.getFirst().isPresent());
+    Assertions.assertTrue(extractionIssuesReqBodies.get(0).isPresent());
 
-    assertWarningInAllExtractionIssues(
-        List.of(extractionIssuesReqBodies.getFirst().get()), BATCH_SIZE);
+    assertWarningInAllExtractionIssues(List.of(extractionIssuesReqBodies.get(0).get()), BATCH_SIZE);
   }
 
   @Test

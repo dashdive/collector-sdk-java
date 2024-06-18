@@ -93,7 +93,8 @@ class MockEventSender implements Runnable {
       throw new IllegalStateException("Thread already run");
     }
 
-    long threadId = Thread.currentThread().threadId();
+    @SuppressWarnings("deprecation")
+    long threadId = Thread.currentThread().getId();
     runThreadId = threadId;
     for (int eventIndex = 0; eventIndex < eventCount; eventIndex++) {
       String eventId = Long.toString(threadId) + "-" + Integer.toString(eventIndex);
@@ -237,7 +238,7 @@ public class ParallelPerfTest {
 
     Assertions.assertEquals(1, totalMetricsMockedClient.getRequests().size());
     final String totalMetricsReqBody =
-        totalMetricsMockedClient.unboxRequestBodiesAssertingNonempty().getFirst();
+        totalMetricsMockedClient.unboxRequestBodiesAssertingNonempty().get(0);
     final Map<String, Integer> totalMetrics =
         MetricsUtils.getMetricsFromRequestBodyWithAssertions(
             MetricsUtils.Type.TOTAL, totalMetricsReqBody, INSTANCE_ID);

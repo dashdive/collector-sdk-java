@@ -109,10 +109,9 @@ public class InternalExtractionTest {
 
     Assertions.assertEquals(1, ingestedEvents.size());
     if (debug) {
-      System.out.println(
-          "Difference: " + Maps.difference(expectedPayload, ingestedEvents.getFirst()));
+      System.out.println("Difference: " + Maps.difference(expectedPayload, ingestedEvents.get(0)));
     }
-    Assertions.assertEquals(expectedPayload, ingestedEvents.getFirst());
+    Assertions.assertEquals(expectedPayload, ingestedEvents.get(0));
   }
 
   // One test should have realistic req/res headers; we choose this one arbitrarily
@@ -320,10 +319,10 @@ public class InternalExtractionTest {
 
     Assertions.assertEquals(1, issueEventObjects.size());
     final List<Map<String, Object>> eventsWithIssues =
-        (List<Map<String, Object>>) issueEventObjects.getFirst().get("eventsWithIssues");
+        (List<Map<String, Object>>) issueEventObjects.get(0).get("eventsWithIssues");
 
     Assertions.assertEquals(1, eventsWithIssues.size());
-    final Map<String, Object> eventWithIssues = eventsWithIssues.getFirst();
+    final Map<String, Object> eventWithIssues = eventsWithIssues.get(0);
 
     Assertions.assertEquals(true, eventWithIssues.get("hasIrrecoverableErrors"));
     Assertions.assertEquals(0, ((List<Object>) eventWithIssues.get("telemetryWarnings")).size());
@@ -331,7 +330,7 @@ public class InternalExtractionTest {
     final List<Map<String, Object>> telemetryErrors =
         (List<Map<String, Object>>) eventWithIssues.get("telemetryErrors");
     Assertions.assertEquals(1, telemetryErrors.size());
-    Assertions.assertEquals("uncaughtExtractionException", telemetryErrors.getFirst().get("type"));
+    Assertions.assertEquals("uncaughtExtractionException", telemetryErrors.get(0).get("type"));
   }
 
   @Test

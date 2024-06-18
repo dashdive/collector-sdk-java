@@ -19,7 +19,6 @@ import java.net.HttpURLConnection;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -33,9 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.core.retry.backoff.FixedDelayBackoffStrategy;
-import software.amazon.awssdk.imds.Ec2MetadataClient;
-import software.amazon.awssdk.imds.Ec2MetadataResponse;
+import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
 
 public class InitialSetupWorker implements Runnable {
   private static final Logger logger = LoggerFactory.getLogger(InitialSetupWorker.class);
@@ -256,20 +253,10 @@ public class InitialSetupWorker implements Runnable {
           IMDSDataField.PUBLIC_IPV4,
           IMDSDataField.AMI_ID,
           IMDSDataField.INSTANCE_TYPE);
+  private static final int QUERY_TRIES = 3;
 
   private static GetAwsImdsDataResult getAwsImdsData() {
     final int maxImdsRequestConcurrency = 8;
-    // We don't use Ec2MetadataAsyncClient because it has noisy error
-    // logging that we don't want to surface to our users
-    final Ec2MetadataClient client =
-        Ec2MetadataClient.builder()
-            // Don't have to worry about retries blocking client
-            //  startup since this is a background thread
-            .retryPolicy(
-                p ->
-                    p.backoffStrategy(FixedDelayBackoffStrategy.create(Duration.ofMillis(200)))
-                        .numRetries(2))
-            .build();
     final ExecutorService executor = Executors.newFixedThreadPool(maxImdsRequestConcurrency);
 
     final ConcurrentMap<String, String> valuesByField = new ConcurrentHashMap<>();
@@ -283,9 +270,10 @@ public class InitialSetupWorker implements Runnable {
                     CompletableFuture.runAsync(
                         () -> {
                           try {
-                            Ec2MetadataResponse response =
-                                client.get(IMDS_BASE_PATH + imdsDataFieldPath);
-                            valuesByField.put(imdsDataFieldPath, response.asString());
+                            final String fieldValue =
+                                EC2MetadataUtils.getData(
+                                    IMDS_BASE_PATH + imdsDataFieldPath, QUERY_TRIES);
+                            valuesByField.put(imdsDataFieldPath, fieldValue);
                           } catch (Exception exception) {
                             exceptionsByField.put(imdsDataFieldPath, exception);
                             fieldsByExceptionChainsWithoutStacks.put(
@@ -296,7 +284,6 @@ public class InitialSetupWorker implements Runnable {
             .collect(ImmutableList.toImmutableList());
 
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-    client.close();
     executor.shutdown();
 
     final ImmutableDashdiveInstanceInfo instanceInfo =
@@ -324,7 +311,7 @@ public class InitialSetupWorker implements Runnable {
                                 fieldsWithSameException,
                                 "exception",
                                 ExceptionUtil.getSerializableExceptionData(
-                                    exceptionsByField.get(fieldsWithSameException.getFirst()))))
+                                    exceptionsByField.get(fieldsWithSameException.get(0)))))
                         .build())
             .collect(ImmutableList.toImmutableList());
     return ImmutableGetAwsImdsDataResult.builder()

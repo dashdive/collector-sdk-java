@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
@@ -45,7 +46,11 @@ class ErrorsTelemetryTest {
             Optional.of(setupDefaults));
 
     final S3Client s3Client =
-        dashdive.withInstrumentation(S3Client.builder().region(Region.EU_CENTRAL_1)).build();
+        S3Client.builder()
+            .region(Region.EU_CENTRAL_1)
+            .overrideConfiguration(
+                dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
+            .build();
 
     final String uuid = "bac79f5b-a302-4ad9-af79-6bf96f9446be";
     final HeadBucketRequest headBucketRequest =
@@ -98,10 +103,10 @@ class ErrorsTelemetryTest {
 
     Assertions.assertEquals(1, issueEventObjects.size());
     final List<Map<String, Object>> eventsWithIssues =
-        (List<Map<String, Object>>) issueEventObjects.getFirst().get("eventsWithIssues");
+        (List<Map<String, Object>>) issueEventObjects.get(0).get("eventsWithIssues");
 
     Assertions.assertEquals(1, eventsWithIssues.size());
-    final Map<String, Object> eventWithIssues = eventsWithIssues.getFirst();
+    final Map<String, Object> eventWithIssues = eventsWithIssues.get(0);
 
     Assertions.assertEquals(true, eventWithIssues.get("hasIrrecoverableErrors"));
     Assertions.assertEquals(0, ((List<Object>) eventWithIssues.get("telemetryWarnings")).size());
@@ -109,6 +114,6 @@ class ErrorsTelemetryTest {
     final List<Map<String, Object>> telemetryErrors =
         (List<Map<String, Object>>) eventWithIssues.get("telemetryErrors");
     Assertions.assertEquals(1, telemetryErrors.size());
-    Assertions.assertEquals("ON_EXECUTION_FAILURE", telemetryErrors.getFirst().get("type"));
+    Assertions.assertEquals("ON_EXECUTION_FAILURE", telemetryErrors.get(0).get("type"));
   }
 }

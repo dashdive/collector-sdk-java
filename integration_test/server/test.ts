@@ -536,16 +536,21 @@ describe("Confirm test client requests", () => {
     });
     const messageOccurrences = lodash.countBy(allExceptionMessages);
     expect(messageOccurrences[msg_keyNotFound]).toEqual(3);
-    expect(messageOccurrences[msg_bucketNotFound]).toEqual(1);
 
     const uniqueMessageCount = Object.keys(messageOccurrences).length;
     expect([2, 3]).toContain(uniqueMessageCount);
-    // This is true if buckets didn't exist (`HeadBucket` gives errors)
+    // This is true if buckets didn't exist (`HeadBucket` gives errors and message is `null`)
     if (uniqueMessageCount === 3) {
       const remainingKey = Object.keys(messageOccurrences).find(
         (key) => key !== msg_keyNotFound && key !== msg_bucketNotFound
       );
+      expect(messageOccurrences[msg_bucketNotFound]).toEqual(1);
       expect(messageOccurrences[remainingKey]).toEqual(3);
+    } else {
+      expect(
+        messageOccurrences[msg_bucketNotFound] == 1 ||
+          messageOccurrences[msg_bucketNotFound] == 4
+      ).toBeTruthy();
     }
   });
 });

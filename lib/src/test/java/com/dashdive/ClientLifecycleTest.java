@@ -94,7 +94,7 @@ public class ClientLifecycleTest {
             .map(req -> req.body())
             .collect(Collectors.toList());
     Assertions.assertEquals(1, matchingRequestBodies.size());
-    final Optional<String> maybeRequestBody = matchingRequestBodies.getFirst();
+    final Optional<String> maybeRequestBody = matchingRequestBodies.get(0);
     Assertions.assertTrue(maybeRequestBody.isPresent());
 
     final ObjectMapper objectMapper = new ObjectMapper();
@@ -156,8 +156,8 @@ public class ClientLifecycleTest {
             .map(req -> req.body())
             .collect(Collectors.toList());
     Assertions.assertEquals(1, startupReqBodies.size());
-    Assertions.assertTrue(startupReqBodies.getFirst().isPresent());
-    final String startupReqBody = startupReqBodies.getFirst().get();
+    Assertions.assertTrue(startupReqBodies.get(0).isPresent());
+    final String startupReqBody = startupReqBodies.get(0).get();
 
     final List<Optional<String>> shutdownReqBodies =
         shutdownMockedClient.getRequests().stream()
@@ -165,8 +165,8 @@ public class ClientLifecycleTest {
             .map(req -> req.body())
             .collect(Collectors.toList());
     Assertions.assertEquals(1, shutdownReqBodies.size());
-    Assertions.assertTrue(shutdownReqBodies.getFirst().isPresent());
-    final String shutdownReqBody = shutdownReqBodies.getFirst().get();
+    Assertions.assertTrue(shutdownReqBodies.get(0).isPresent());
+    final String shutdownReqBody = shutdownReqBodies.get(0).get();
 
     final ObjectMapper objectMapper = new ObjectMapper();
     Map<String, Object> parsedStartupJson = null;
@@ -266,7 +266,7 @@ public class ClientLifecycleTest {
 
     Assertions.assertEquals(1, totalMetricsMockedClient.getRequests().size());
     final String totalMetricsReqBody =
-        totalMetricsMockedClient.unboxRequestBodiesAssertingNonempty().getFirst();
+        totalMetricsMockedClient.unboxRequestBodiesAssertingNonempty().get(0);
     final Map<String, Integer> totalMetrics =
         MetricsUtils.getMetricsFromRequestBodyWithAssertions(
             MetricsUtils.Type.TOTAL, totalMetricsReqBody, instanceId);

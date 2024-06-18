@@ -13,11 +13,11 @@ repositories {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(11)
     }
 }
 
-val awsJavaSdkVersion = "2.20.32"
+val awsJavaSdkVersion = "2.17.3"
 dependencies {
     implementation(platform("software.amazon.awssdk:bom:$awsJavaSdkVersion"))
     implementation("software.amazon.awssdk:s3")

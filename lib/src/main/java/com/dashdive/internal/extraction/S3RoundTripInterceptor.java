@@ -64,8 +64,8 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
     // We correlate the successful enqueueing of each event across `onExecutionFailure`
     // and `afterExecution` to ensure it's only done once per event.
     try {
-      final boolean hasSentPayload =
-          executionAttributes.getOptionalAttribute(sentPayloadAttr).orElse(false);
+      final Boolean hasSentPayloadObject = executionAttributes.getAttribute(sentPayloadAttr);
+      final boolean hasSentPayload = hasSentPayloadObject == null ? false : hasSentPayloadObject;
 
       final TelemetryPayload executionFailurePayload =
           TelemetryPayload.from(
@@ -122,8 +122,8 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
   private boolean safeAfterExecutionReturningSuccess(
       Context.AfterExecution context, ExecutionAttributes executionAttributes) {
     try {
-      final boolean hasSentPayload =
-          executionAttributes.getOptionalAttribute(sentPayloadAttr).orElse(false);
+      final Boolean hasSentPayloadObject = executionAttributes.getAttribute(sentPayloadAttr);
+      final boolean hasSentPayload = hasSentPayloadObject == null ? false : hasSentPayloadObject;
       if (hasSentPayload) {
         return true;
       }
