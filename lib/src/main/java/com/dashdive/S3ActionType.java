@@ -3,6 +3,14 @@ package com.dashdive;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 
+/**
+ * An enumeration of all supported S3 action types that can be recorded by the Dashdive SDK. Each
+ * action type corresponds to a specific S3 API operation, and is used to categorize the events that
+ * are sent to the Dashdive ingestion API.
+ *
+ * <p>Unsupported action types can still be processed without errors and are represented by the
+ * {@link #UNKNOWN} constant. These events are still sent to the Dashdive ingestion API.
+ */
 public enum S3ActionType {
   UNKNOWN("Unknown"),
 
@@ -59,6 +67,14 @@ public enum S3ActionType {
     this.text = text;
   }
 
+  /**
+   * Returns the action type that corresponds to the given text representation, which is expected to
+   * be a "TitleCase" version of the "CONSTANT_CASE" enum name.
+   *
+   * @param text a "TitleCase" version of the "CONSTANT_CASE" enum name
+   * @return the action type that corresponds to the given text representation, or {@link
+   *     Optional#empty()} if the text representation is invalid
+   */
   public static Optional<S3ActionType> safeValueOf(String text) {
     if (!StringUtils.isAlphanumeric(text)) {
       return Optional.empty();
@@ -83,11 +99,24 @@ public enum S3ActionType {
     }
   }
 
+  /**
+   * Returns the text representation of the action type, a "TitleCase" version of the
+   * "CONSTANT_CASE" enum name.
+   *
+   * @return the text representation of the action type
+   */
   @Override
   public String toString() {
     return text;
   }
 
+  /**
+   * Returns the wire representation of the action type, which is compatible with the Dashdive
+   * ingestion API. In practice, this is the same as the enum's text representation via {@link
+   * #toString()}.
+   *
+   * @return the wire representation of the action type
+   */
   public String toWireString() {
     return text;
   }

@@ -123,7 +123,7 @@ public class SingleEventBatcher {
 
   private final BatchEventProcessor batchEventProcessor;
 
-  private AtomicBoolean isShutDown;
+  private final AtomicBoolean isShutDown;
 
   public SingleEventBatcher(
       AtomicBoolean isInitialized,
