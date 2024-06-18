@@ -2,7 +2,6 @@ package com.dashdive.internal.batching;
 
 import com.dashdive.Dashdive;
 import com.dashdive.S3EventAttributeExtractor;
-import com.dashdive.S3EventAttributeExtractorFactory;
 import com.dashdive.internal.DashdiveConnection;
 import com.dashdive.internal.DashdiveConnection.BackoffSendConfig;
 import com.dashdive.internal.DashdiveInstanceInfo;
@@ -95,7 +94,7 @@ public class BatchEventProcessor {
 
   private final AtomicReference<DashdiveInstanceInfo> instanceInfo;
 
-  private final S3EventAttributeExtractorFactory s3EventAttributeExtractorFactory;
+  private final S3EventAttributeExtractor s3EventAttributeExtractor;
   private final Optional<Duration> shutdownGracePeriod;
 
   private static final int EXECUTOR_CORE_POOL_SIZE = 0;
@@ -111,7 +110,7 @@ public class BatchEventProcessor {
   public BatchEventProcessor(
       AtomicReference<DashdiveInstanceInfo> instanceInfo,
       String apiKey,
-      S3EventAttributeExtractorFactory s3EventAttributeExtractorFactory,
+      S3EventAttributeExtractor s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
       // TODO: It may be the case that Java 11's HttpClient is not thread safe,
       // or the SSL context is not thread safe (see: https://stackoverflow.com/a/53767728),
@@ -125,7 +124,7 @@ public class BatchEventProcessor {
     this.objectMapper = DashdiveConnection.DEFAULT_SERIALIZER;
 
     this.apiKey = apiKey;
-    this.s3EventAttributeExtractorFactory = s3EventAttributeExtractorFactory;
+    this.s3EventAttributeExtractor = s3EventAttributeExtractor;
     this.shutdownGracePeriod = shutdownGracePeriod;
 
     this.instanceInfo = instanceInfo;
@@ -163,8 +162,7 @@ public class BatchEventProcessor {
 
     boolean didEnqueue = true;
     try {
-      executor.submit(
-          () -> processBatch(batch, this.s3EventAttributeExtractorFactory.createExtractor()));
+      executor.submit(() -> processBatch(batch, this.s3EventAttributeExtractor));
     } catch (RejectedExecutionException exception) {
       didEnqueue = false;
     }

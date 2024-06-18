@@ -87,7 +87,7 @@ public class Dashdive implements AutoCloseable {
   // to allow for mocked HTTP clients
   Dashdive(
       String apiKey,
-      Optional<S3EventAttributeExtractorFactory> s3EventAttributeExtractorFactory,
+      Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
       HttpClient dashdiveHttpClient,
       HttpClient setupHttpClient,
@@ -108,17 +108,17 @@ public class Dashdive implements AutoCloseable {
     this.targetEventBatchSize = new AtomicInteger(SingleEventBatcher.DEFAULT_TARGET_BATCH_SIZE);
 
     this.apiKey = apiKey;
-    if (!s3EventAttributeExtractorFactory.isPresent()) {
+    if (!s3EventAttributeExtractor.isPresent()) {
       logger.warn(
           "No S3 event attribute extractor factory provided; using factory for no-op extractor.");
     }
-    final S3EventAttributeExtractorFactory presentS3EventAttributeExtractorFactory =
-        s3EventAttributeExtractorFactory.orElse(() -> new NoOpS3EventAttributeExtractor());
+    final S3EventAttributeExtractor presentS3EventAttributeExtractor =
+        s3EventAttributeExtractor.orElse(new NoOpS3EventAttributeExtractor());
     this.batchEventProcessor =
         new BatchEventProcessor(
             this.instanceInfo,
             apiKey,
-            presentS3EventAttributeExtractorFactory,
+            presentS3EventAttributeExtractor,
             shutdownGracePeriod,
             batchProcessorHttpClient,
             metricsHttpClient);
@@ -145,7 +145,7 @@ public class Dashdive implements AutoCloseable {
 
   Dashdive(
       String apiKey,
-      Optional<S3EventAttributeExtractorFactory> s3EventAttributeExtractorFactory,
+      Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
       HttpClient dashdiveHttpClient,
       HttpClient setupHttpClient,
@@ -154,7 +154,7 @@ public class Dashdive implements AutoCloseable {
       Optional<SetupDefaults> skipSetupWithDefaultss) {
     this(
         apiKey,
-        s3EventAttributeExtractorFactory,
+        s3EventAttributeExtractor,
         shutdownGracePeriod,
         dashdiveHttpClient,
         setupHttpClient,
@@ -166,9 +166,9 @@ public class Dashdive implements AutoCloseable {
 
   Dashdive(
       String apiKey,
-      Optional<S3EventAttributeExtractorFactory> s3EventAttributeExtractorFactory,
+      Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
-    this(Optional.of(apiKey), s3EventAttributeExtractorFactory, shutdownGracePeriod);
+    this(Optional.of(apiKey), s3EventAttributeExtractor, shutdownGracePeriod);
   }
 
   /**
@@ -176,21 +176,21 @@ public class Dashdive implements AutoCloseable {
    * extractor factory, and shutdown grace period.
    *
    * @param apiKey the API key to use for sending telemetry data
-   * @param s3EventAttributeExtractorFactory a factory which returns a function which extracts
-   *     attributes from S3 events
+   * @param s3EventAttributeExtractor a factory which returns a function which extracts attributes
+   *     from S3 events
    * @param shutdownGracePeriod the duration to wait for the Dashdive instance to flush any
    *     remaining events and send
    */
   @Builder.Constructor
   Dashdive(
       Optional<String> apiKey,
-      Optional<S3EventAttributeExtractorFactory> s3EventAttributeExtractorFactory,
+      Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
     // No need to check the user-supplied values for null, since the Immutables
     // builder automatically enforces non-null
     this(
         apiKey.orElse(""),
-        s3EventAttributeExtractorFactory,
+        s3EventAttributeExtractor,
         shutdownGracePeriod,
         DashdiveConnection.directExecutorHttpClient(),
         DashdiveConnection.directExecutorHttpClient(),

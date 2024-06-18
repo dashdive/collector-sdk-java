@@ -36,7 +36,7 @@ public class ClientLifecycleTest {
     final Dashdive dashdive =
         new Dashdive(
             TestUtils.API_KEY_DUMMY,
-            Optional.of(TestUtils.FACTORY_CUSTOMER),
+            Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
             sharedMockedClient.getDelegate(),
             sharedMockedClient.getDelegate(),
@@ -76,7 +76,7 @@ public class ClientLifecycleTest {
     final Dashdive dashdive =
         new Dashdive(
             "INVALID-KEY",
-            Optional.of(TestUtils.FACTORY_CUSTOMER),
+            Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
             ignoredMockedClient.getDelegate(),
             startupMockedClient.getDelegate(),
@@ -137,7 +137,7 @@ public class ClientLifecycleTest {
     final Dashdive dashdive =
         new Dashdive(
             TestUtils.API_KEY_DUMMY,
-            Optional.of(TestUtils.FACTORY_CUSTOMER),
+            Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
             shutdownMockedClient.getDelegate(),
             startupMockedClient.getDelegate(),
@@ -229,7 +229,7 @@ public class ClientLifecycleTest {
     final Dashdive dashdive =
         new Dashdive(
             TestUtils.API_KEY_DUMMY,
-            Optional.of(TestUtils.FACTORY_CUSTOMER),
+            Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             shutdownGracePeriod,
             totalMetricsMockedClient.getDelegate(),
             ignoredMockedClient.getDelegate(),

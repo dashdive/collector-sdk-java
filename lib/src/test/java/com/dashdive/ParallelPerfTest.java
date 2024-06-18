@@ -174,9 +174,8 @@ public class ParallelPerfTest {
     final int BATCH_SIZE = 5;
     final String INSTANCE_ID = "parallel-perf";
 
-    final S3EventAttributeExtractorFactory factoryWithCustomerId =
-        S3EventAttributeExtractorFactory.from(
-            (input) -> ImmutableS3EventAttributes.builder().customerId("dummy-customer").build());
+    final S3EventAttributeExtractor factoryWithCustomerId =
+        (input) -> ImmutableS3EventAttributes.builder().customerId("dummy-customer").build();
 
     final SetupDefaults setupDefaults =
         ImmutableSetupDefaults.builder()

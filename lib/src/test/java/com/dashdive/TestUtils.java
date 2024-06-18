@@ -46,11 +46,11 @@ class TestUtils {
   public static final String API_KEY_PRODUCTION =
       "IIOQRHEC.Dzi3Au0n0NSq5VBcB2e0KgovA/EATJt4vHzdBFNusybUIgOw";
 
-  public static final S3EventAttributeExtractorFactory FACTORY_EMPTY =
-      () -> (e) -> ImmutableS3EventAttributes.of();
-  public static final String FACTORY_CUSTOMER_VAL = "dummy-customer";
-  public static final S3EventAttributeExtractorFactory FACTORY_CUSTOMER =
-      () -> (e) -> ImmutableS3EventAttributes.builder().customerId(FACTORY_CUSTOMER_VAL).build();
+  public static final S3EventAttributeExtractor EXTRACTOR_EMPTY =
+      (e) -> ImmutableS3EventAttributes.of();
+  public static final String EXTRACTOR_CUSTOMER_VAL = "dummy-customer";
+  public static final S3EventAttributeExtractor EXTRACTOR_CUSTOMER =
+      (e) -> ImmutableS3EventAttributes.builder().customerId(EXTRACTOR_CUSTOMER_VAL).build();
 
   public static final ExecutionAttributes EXEC_ATTRS_EMPTY = ExecutionAttributes.builder().build();
 

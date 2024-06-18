@@ -41,7 +41,7 @@ public class InterceptorIdempotencyTest {
     Dashdive dashdive =
         new Dashdive(
             TestUtils.API_KEY_DUMMY,
-            Optional.of(TestUtils.FACTORY_EMPTY),
+            Optional.of(TestUtils.EXTRACTOR_EMPTY),
             Optional.empty(),
             sharedMockedClient.getDelegate(),
             sharedMockedClient.getDelegate(),

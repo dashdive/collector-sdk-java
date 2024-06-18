@@ -55,7 +55,7 @@ public class InternalExtractionTest {
     final Dashdive dashdive =
         new Dashdive(
             TestUtils.API_KEY_DUMMY,
-            Optional.of(TestUtils.FACTORY_CUSTOMER),
+            Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
             ignoredMockHttpClient.getDelegate(),
             ignoredMockHttpClient.getDelegate(),
@@ -190,7 +190,7 @@ public class InternalExtractionTest {
             "isBillableEgress",
             true,
             "customerId",
-            TestUtils.FACTORY_CUSTOMER_VAL);
+            TestUtils.EXTRACTOR_CUSTOMER_VAL);
 
     doSingleEventExtractionTest(
         "GetObject",
@@ -247,7 +247,7 @@ public class InternalExtractionTest {
             "bytes",
             OBJECT_SIZE,
             "customerId",
-            TestUtils.FACTORY_CUSTOMER_VAL);
+            TestUtils.EXTRACTOR_CUSTOMER_VAL);
 
     doSingleEventExtractionTest(
         "PutObject",
@@ -371,7 +371,7 @@ public class InternalExtractionTest {
             "classNames",
             serializedClassNames,
             "customerId",
-            TestUtils.FACTORY_CUSTOMER_VAL);
+            TestUtils.EXTRACTOR_CUSTOMER_VAL);
 
     doSingleEventExtractionTest(
         "unknown_event_type",

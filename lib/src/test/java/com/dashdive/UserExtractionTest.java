@@ -14,26 +14,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class UserExtractionTest {
-  @Test
-  void nullableFactoryIsDisallowed() {
-    NullPointerException exception = null;
-    Dashdive dashdiveFromBuilder = null;
-    try {
-      dashdiveFromBuilder =
-          Dashdive.builder()
-              .apiKey(TestUtils.API_KEY_DUMMY)
-              .s3EventAttributeExtractorFactory((S3EventAttributeExtractorFactory) null)
-              .build();
-    } catch (NullPointerException caught) {
-      exception = caught;
-    } finally {
-      if (dashdiveFromBuilder != null) {
-        dashdiveFromBuilder.close();
-      }
-    }
-    Assertions.assertNotNull(exception);
-  }
-
   private static void assertWarningInAllExtractionIssues(
       List<String> extractionIssuesRequestBodies, int expectedEventsWithIssuesCount) {
 
@@ -117,7 +97,7 @@ public class UserExtractionTest {
 
   @Test
   void nullExtractionIsIgnoredWithWarnings() {
-    final S3EventAttributeExtractorFactory factoryReturningNull = () -> (input) -> null;
+    final S3EventAttributeExtractor factoryReturningNull = (input) -> null;
 
     final MockHttpClient ignoredMockHttpClient = new MockHttpClient();
     final MockHttpClient batchMockHttpClient = new MockHttpClient();
@@ -168,21 +148,20 @@ public class UserExtractionTest {
 
   @Test
   void userExtractorWorksAsExpected() {
-    final S3EventAttributeExtractorFactory factoryWithFeatureId =
-        S3EventAttributeExtractorFactory.from(
-            (input) -> {
-              final String featureId =
-                  input
-                      .bucketName()
-                      .map(
-                          bucketName -> {
-                            final List<String> parts = List.of(bucketName.split("-"));
-                            final String numberId = parts.get(parts.size() - 1);
-                            return "feature-" + numberId;
-                          })
-                      .orElse("UNKNOWN");
-              return ImmutableS3EventAttributes.builder().featureId(featureId).build();
-            });
+    final S3EventAttributeExtractor factoryWithFeatureId =
+        (input) -> {
+          final String featureId =
+              input
+                  .bucketName()
+                  .map(
+                      bucketName -> {
+                        final List<String> parts = List.of(bucketName.split("-"));
+                        final String numberId = parts.get(parts.size() - 1);
+                        return "feature-" + numberId;
+                      })
+                  .orElse("UNKNOWN");
+          return ImmutableS3EventAttributes.builder().featureId(featureId).build();
+        };
 
     final MockHttpClient ignoredMockHttpClient = new MockHttpClient();
     final MockHttpClient batchMockHttpClient = new MockHttpClient();
