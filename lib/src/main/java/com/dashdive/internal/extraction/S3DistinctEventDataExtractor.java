@@ -318,33 +318,33 @@ public class S3DistinctEventDataExtractor {
     // See: https://stackoverflow.com/a/22110821/14816795
     switch (actionType) {
         // "Object modification" event types
-      case S3ActionType.GET_OBJECT:
+      case GET_OBJECT:
         distinctFields =
             extractDistinctFieldsForEventType_GetObject(
                 (GetObjectRequest) roundTripData.pojoRequest(),
                 (GetObjectResponse) roundTripData.pojoResponse(),
                 roundTripData.httpRequest());
         break;
-      case S3ActionType.PUT_OBJECT:
+      case PUT_OBJECT:
         distinctFields =
             extractDistinctFieldsForEventType_PutObject(
                 (PutObjectRequest) roundTripData.pojoRequest(),
                 (PutObjectResponse) roundTripData.pojoResponse(),
                 roundTripData.requestBody());
         break;
-      case S3ActionType.COPY_OBJECT:
+      case COPY_OBJECT:
         distinctFields =
             extractDistinctFieldsForEventType_CopyObject(
                 (CopyObjectRequest) roundTripData.pojoRequest(),
                 (CopyObjectResponse) roundTripData.pojoResponse());
         break;
-      case S3ActionType.DELETE_OBJECT:
+      case DELETE_OBJECT:
         distinctFields =
             extractDistinctFieldsForEventType_DeleteObject(
                 (DeleteObjectRequest) roundTripData.pojoRequest(),
                 (DeleteObjectResponse) roundTripData.pojoResponse());
         break;
-      case S3ActionType.DELETE_OBJECTS:
+      case DELETE_OBJECTS:
         distinctFields =
             extractDistinctFieldsForEventType_DeleteObjects(
                 (DeleteObjectsRequest) roundTripData.pojoRequest(),
@@ -352,51 +352,51 @@ public class S3DistinctEventDataExtractor {
         break;
 
         // "Global" event types
-      case S3ActionType.LIST_BUCKETS:
+      case LIST_BUCKETS:
         distinctFields =
             extractDistinctFieldsForEventTypes_Global(
                 roundTripData.pojoRequest(), roundTripData.pojoResponse());
         break;
 
         // "Multipart upload" event types
-      case S3ActionType.CREATE_MULTIPART_UPLOAD:
+      case CREATE_MULTIPART_UPLOAD:
         distinctFields =
             extractDistinctFieldsForEventType_CreateMultipartUpload(
                 (CreateMultipartUploadRequest) roundTripData.pojoRequest(),
                 (CreateMultipartUploadResponse) roundTripData.pojoResponse());
         break;
-      case S3ActionType.COMPLETE_MULTIPART_UPLOAD:
+      case COMPLETE_MULTIPART_UPLOAD:
         distinctFields =
             extractDistinctFieldsForEventType_CompleteMultipartUpload(
                 (CompleteMultipartUploadRequest) roundTripData.pojoRequest(),
                 (CompleteMultipartUploadResponse) roundTripData.pojoResponse());
         break;
-      case S3ActionType.ABORT_MULTIPART_UPLOAD:
+      case ABORT_MULTIPART_UPLOAD:
         distinctFields =
             extractDistinctFieldsForEventType_AbortMultipartUpload(
                 (AbortMultipartUploadRequest) roundTripData.pojoRequest(),
                 (AbortMultipartUploadResponse) roundTripData.pojoResponse());
         break;
-      case S3ActionType.UPLOAD_PART:
+      case UPLOAD_PART:
         distinctFields =
             extractDistinctFieldsForEventType_UploadPart(
                 (UploadPartRequest) roundTripData.pojoRequest(),
                 (UploadPartResponse) roundTripData.pojoResponse(),
                 roundTripData.requestBody());
         break;
-      case S3ActionType.UPLOAD_PART_COPY:
+      case UPLOAD_PART_COPY:
         distinctFields =
             extractDistinctFieldsForEventType_UploadPartCopy(
                 (UploadPartCopyRequest) roundTripData.pojoRequest(),
                 (UploadPartCopyResponse) roundTripData.pojoResponse());
         break;
-      case S3ActionType.LIST_PARTS:
+      case LIST_PARTS:
         distinctFields =
             extractDistinctFieldsForEventType_ListParts(
                 (ListPartsRequest) roundTripData.pojoRequest(),
                 (ListPartsResponse) roundTripData.pojoResponse());
         break;
-      case S3ActionType.LIST_MULTIPART_UPLOADS:
+      case LIST_MULTIPART_UPLOADS:
         distinctFields =
             extractDistinctFieldsForEventType_ListMultipartUploads(
                 (ListMultipartUploadsRequest) roundTripData.pojoRequest(),
@@ -404,42 +404,42 @@ public class S3DistinctEventDataExtractor {
         break;
 
         // "Per-bucket" event types (all contain `bucket()` accessor)
-      case S3ActionType.DELETE_BUCKET:
-      case S3ActionType.HEAD_BUCKET:
-      case S3ActionType.CREATE_BUCKET:
-      case S3ActionType.GET_BUCKET_ACL:
-      case S3ActionType.GET_BUCKET_CORS:
-      case S3ActionType.GET_BUCKET_ENCRYPTION:
-      case S3ActionType.GET_BUCKET_LOCATION:
-      case S3ActionType.GET_BUCKET_VERSIONING:
-      case S3ActionType.PUT_BUCKET_ACL:
-      case S3ActionType.PUT_BUCKET_CORS:
-      case S3ActionType.PUT_BUCKET_ENCRYPTION:
-      case S3ActionType.DELETE_BUCKET_CORS:
-      case S3ActionType.DELETE_BUCKET_ENCRYPTION:
-      case S3ActionType.GET_OBJECT_LOCK_CONFIGURATION:
-      case S3ActionType.PUT_OBJECT_LOCK_CONFIGURATION:
-      case S3ActionType.LIST_OBJECTS_V2:
-      case S3ActionType.LIST_OBJECT_VERSIONS:
+      case DELETE_BUCKET:
+      case HEAD_BUCKET:
+      case CREATE_BUCKET:
+      case GET_BUCKET_ACL:
+      case GET_BUCKET_CORS:
+      case GET_BUCKET_ENCRYPTION:
+      case GET_BUCKET_LOCATION:
+      case GET_BUCKET_VERSIONING:
+      case PUT_BUCKET_ACL:
+      case PUT_BUCKET_CORS:
+      case PUT_BUCKET_ENCRYPTION:
+      case DELETE_BUCKET_CORS:
+      case DELETE_BUCKET_ENCRYPTION:
+      case GET_OBJECT_LOCK_CONFIGURATION:
+      case PUT_OBJECT_LOCK_CONFIGURATION:
+      case LIST_OBJECTS_V2:
+      case LIST_OBJECT_VERSIONS:
         distinctFields =
             extractDistinctFieldsForMultipleEventTypes_PerBucket(
                 roundTripData.pojoRequest(), roundTripData.pojoResponse());
         break;
 
         // "Simple per-object" event types (all contain `key()` accessor)
-      case S3ActionType.HEAD_OBJECT:
-      case S3ActionType.GET_OBJECT_ACL:
-      case S3ActionType.PUT_OBJECT_ACL:
-      case S3ActionType.GET_OBJECT_RETENTION:
-      case S3ActionType.PUT_OBJECT_RETENTION:
-      case S3ActionType.GET_OBJECT_LEGAL_HOLD:
-      case S3ActionType.PUT_OBJECT_LEGAL_HOLD:
+      case HEAD_OBJECT:
+      case GET_OBJECT_ACL:
+      case PUT_OBJECT_ACL:
+      case GET_OBJECT_RETENTION:
+      case PUT_OBJECT_RETENTION:
+      case GET_OBJECT_LEGAL_HOLD:
+      case PUT_OBJECT_LEGAL_HOLD:
         distinctFields =
             extractDistinctFieldsForMultipleEventTypes_SimplePerObject(
                 roundTripData.pojoRequest(), roundTripData.pojoResponse());
         break;
 
-      case S3ActionType.UNKNOWN:
+      case UNKNOWN:
         distinctFields = ImmutableMap.of("classNames", serializedReqResClassNames);
         break;
 

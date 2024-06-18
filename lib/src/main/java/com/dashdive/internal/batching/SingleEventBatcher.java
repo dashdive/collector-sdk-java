@@ -189,7 +189,7 @@ public class SingleEventBatcher {
       return false;
     }
 
-    final long threadId = Thread.currentThread().threadId();
+    final long threadId = Thread.currentThread().getId();
     batchRemovalLocksByThread.acquire(threadId);
     try {
       queueEventForIngestion_unlocked(threadId, event);

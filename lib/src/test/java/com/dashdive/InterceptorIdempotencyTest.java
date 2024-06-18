@@ -100,13 +100,13 @@ public class InterceptorIdempotencyTest {
                 .executionInterceptors());
 
     Assertions.assertEquals(1, combinedList.size());
-    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, combinedList.getFirst());
+    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, combinedList.get(0));
 
     Assertions.assertEquals(1, interceptorList.size());
-    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, interceptorList.getFirst());
+    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, interceptorList.get(0));
 
     Assertions.assertEquals(1, instrumentationList.size());
-    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, instrumentationList.getFirst());
+    Assertions.assertInstanceOf(S3RoundTripInterceptor.class, instrumentationList.get(0));
 
     combinedS3Client.close();
     interceptorS3Client.close();

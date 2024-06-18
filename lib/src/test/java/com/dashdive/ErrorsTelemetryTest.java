@@ -103,10 +103,10 @@ class ErrorsTelemetryTest {
 
     Assertions.assertEquals(1, issueEventObjects.size());
     final List<Map<String, Object>> eventsWithIssues =
-        (List<Map<String, Object>>) issueEventObjects.getFirst().get("eventsWithIssues");
+        (List<Map<String, Object>>) issueEventObjects.get(0).get("eventsWithIssues");
 
     Assertions.assertEquals(1, eventsWithIssues.size());
-    final Map<String, Object> eventWithIssues = eventsWithIssues.getFirst();
+    final Map<String, Object> eventWithIssues = eventsWithIssues.get(0);
 
     Assertions.assertEquals(true, eventWithIssues.get("hasIrrecoverableErrors"));
     Assertions.assertEquals(0, ((List<Object>) eventWithIssues.get("telemetryWarnings")).size());
@@ -114,6 +114,6 @@ class ErrorsTelemetryTest {
     final List<Map<String, Object>> telemetryErrors =
         (List<Map<String, Object>>) eventWithIssues.get("telemetryErrors");
     Assertions.assertEquals(1, telemetryErrors.size());
-    Assertions.assertEquals("ON_EXECUTION_FAILURE", telemetryErrors.getFirst().get("type"));
+    Assertions.assertEquals("ON_EXECUTION_FAILURE", telemetryErrors.get(0).get("type"));
   }
 }

@@ -311,7 +311,7 @@ public class InitialSetupWorker implements Runnable {
                                 fieldsWithSameException,
                                 "exception",
                                 ExceptionUtil.getSerializableExceptionData(
-                                    exceptionsByField.get(fieldsWithSameException.getFirst()))))
+                                    exceptionsByField.get(fieldsWithSameException.get(0)))))
                         .build())
             .collect(ImmutableList.toImmutableList());
     return ImmutableGetAwsImdsDataResult.builder()
