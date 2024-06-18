@@ -189,7 +189,6 @@ public class SingleEventBatcher {
       return false;
     }
 
-    @SuppressWarnings("deprecation")
     final long threadId = Thread.currentThread().getId();
     batchRemovalLocksByThread.acquire(threadId);
     try {

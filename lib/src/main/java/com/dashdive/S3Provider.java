@@ -3,6 +3,7 @@ package com.dashdive;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Optional;
 
 // Note that it is indeed possible, and documented / encouraged, to use
@@ -56,7 +57,7 @@ public enum S3Provider {
     }
   }
 
-  public static final ImmutableMap<S3Provider.Suffix, S3Provider> BY_SUFFIX =
+  public static final Map<S3Provider.Suffix, S3Provider> BY_SUFFIX =
       ImmutableMap.of(
           S3Provider.Suffix.AWS,
           S3Provider.AWS,

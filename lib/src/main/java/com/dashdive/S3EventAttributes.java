@@ -1,8 +1,9 @@
 package com.dashdive;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.Map;
 import java.util.Optional;
 import org.immutables.value.Value;
 
@@ -19,8 +20,8 @@ public abstract class S3EventAttributes {
 
   public abstract Optional<String> objectCategory();
 
-  public ImmutableMap<String, Object> asMap() {
-    return ImmutableMap.of(
+  public Map<String, Object> asMap() {
+    return Map.of(
             "customerId", customerId().orElse(""),
             "featureId", featureId().orElse(""),
             "clientType", clientType().orElse(""),
@@ -29,7 +30,7 @@ public abstract class S3EventAttributes {
         .entrySet()
         .stream()
         .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
-        .collect(ImmutableMap.toImmutableMap(Entry::getKey, Entry::getValue));
+        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
   }
 
   public boolean isEmpty() {
