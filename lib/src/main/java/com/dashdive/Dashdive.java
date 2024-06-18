@@ -258,18 +258,11 @@ public class Dashdive implements AutoCloseable {
 
   // Once this method is called on the `clientBuilder`, the caller should not
   // call `clientBuilder.overrideConfiguration(...)` again, or the interceptor will be erased.
-  public S3ClientBuilder withInstrumentation(final S3ClientBuilder clientBuilder) {
-    final ClientOverrideConfiguration existingOverrideConfig =
-        clientBuilder.overrideConfiguration();
-    final ClientOverrideConfiguration.Builder modifiedOverrideConfigBuilder =
-        existingOverrideConfig == null
-            ? ClientOverrideConfiguration.builder()
-            : existingOverrideConfig.toBuilder();
-
-    final ClientOverrideConfiguration modifiedOverrideConfig =
-        addInterceptorIdempotentlyTo(modifiedOverrideConfigBuilder).build();
-
-    return clientBuilder.overrideConfiguration(modifiedOverrideConfig);
+  public S3ClientBuilder withNewOverrideConfigHavingInstrumentation(
+      final S3ClientBuilder clientBuilder) {
+    final ClientOverrideConfiguration newOverrideConfig =
+        addInterceptorIdempotentlyTo(ClientOverrideConfiguration.builder()).build();
+    return clientBuilder.overrideConfiguration(newOverrideConfig);
   }
 
   @VisibleForTesting

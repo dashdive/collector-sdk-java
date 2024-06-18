@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
@@ -45,7 +46,11 @@ class ErrorsTelemetryTest {
             Optional.of(setupDefaults));
 
     final S3Client s3Client =
-        dashdive.withInstrumentation(S3Client.builder().region(Region.EU_CENTRAL_1)).build();
+        S3Client.builder()
+            .region(Region.EU_CENTRAL_1)
+            .overrideConfiguration(
+                dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
+            .build();
 
     final String uuid = "bac79f5b-a302-4ad9-af79-6bf96f9446be";
     final HeadBucketRequest headBucketRequest =

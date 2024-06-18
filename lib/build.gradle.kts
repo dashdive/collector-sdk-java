@@ -50,7 +50,7 @@ publishing {
     }
 }
 
-val awsJavaSdkVersion = "2.20.32"
+val awsJavaSdkVersion = "2.17.3"
 dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -59,7 +59,6 @@ dependencies {
 
     implementation(platform("software.amazon.awssdk:bom:$awsJavaSdkVersion"))
     implementation("software.amazon.awssdk:s3")
-    implementation("software.amazon.awssdk:imds")
     
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     implementation("org.slf4j:slf4j-api:1.7.25")
