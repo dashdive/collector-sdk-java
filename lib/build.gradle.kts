@@ -50,6 +50,33 @@ publishing {
     }
 }
 
+tasks.javadoc {
+    dependsOn("compileJava")
+    
+    destinationDir = file("build/docs/javadoc")
+    include("com/dashdive/*.java")
+    exclude("com/dashdive/internal/**")
+
+    source = files(
+        sourceSets["main"].java.srcDirs,
+        file("build/generated/sources/annotationProcessor/java/main")
+    ).asFileTree
+
+    title = "Dashdive Collector SDK - 1.0.0"
+    
+    options {
+        // Workaround for: https://github.com/gradle/gradle/issues/7038
+        // See: https://stackoverflow.com/a/74219033/14816795
+        require(this is StandardJavadocDocletOptions)
+        links(
+            "https://docs.oracle.com/en/java/javase/11/docs/api/",
+            "https://sdk.amazonaws.com/java/api/latest/")
+    }
+}
+tasks.named("build") {
+    dependsOn("javadoc")
+}
+
 val awsJavaSdkVersion = "2.17.3"
 dependencies {
     testImplementation(libs.junit.jupiter)
@@ -98,13 +125,6 @@ fun excludeConditionally(sourceSet: SourceSet, condition: () -> Boolean, vararg 
 }
 
 sourceSets {
-    main {
-        excludeConditionally(
-            sourceSet = this,
-            condition = { !isImplemented_ServiceClientConfig() },
-            paths = arrayOf("**/InterceptorIdempotencyTest.java")
-        )
-    }
     test {
         excludeConditionally(
             sourceSet = this,
