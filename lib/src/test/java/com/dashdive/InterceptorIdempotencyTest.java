@@ -59,8 +59,10 @@ public class InterceptorIdempotencyTest {
         S3Client.builder()
             .region(Region.US_WEST_1)
             .overrideConfiguration(combinedOverrideConfigurationBuilder.build());
-    combinedS3ClientBuilder = dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
-    combinedS3ClientBuilder = dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
+    combinedS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
+    combinedS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
     final S3Client combinedS3Client = combinedS3ClientBuilder.build();
 
     ClientOverrideConfiguration.Builder interceptorOverrideConfigurationBuilder =
@@ -76,8 +78,10 @@ public class InterceptorIdempotencyTest {
             .build();
 
     S3ClientBuilder instrumentationS3ClientBuilder = S3Client.builder().region(Region.EU_CENTRAL_1);
-    instrumentationS3ClientBuilder = dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
-    instrumentationS3ClientBuilder = dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
+    instrumentationS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
+    instrumentationS3ClientBuilder =
+        dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
     final S3Client instrumentationS3Client = instrumentationS3ClientBuilder.build();
 
     final List<ExecutionInterceptor> combinedList =

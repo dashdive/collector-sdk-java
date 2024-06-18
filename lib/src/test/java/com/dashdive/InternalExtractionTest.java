@@ -109,8 +109,7 @@ public class InternalExtractionTest {
 
     Assertions.assertEquals(1, ingestedEvents.size());
     if (debug) {
-      System.out.println(
-          "Difference: " + Maps.difference(expectedPayload, ingestedEvents.get(0)));
+      System.out.println("Difference: " + Maps.difference(expectedPayload, ingestedEvents.get(0)));
     }
     Assertions.assertEquals(expectedPayload, ingestedEvents.get(0));
   }

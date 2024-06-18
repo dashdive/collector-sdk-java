@@ -93,6 +93,7 @@ class MockEventSender implements Runnable {
       throw new IllegalStateException("Thread already run");
     }
 
+    @SuppressWarnings("deprecation")
     long threadId = Thread.currentThread().getId();
     runThreadId = threadId;
     for (int eventIndex = 0; eventIndex < eventCount; eventIndex++) {

@@ -94,16 +94,18 @@ public class Main {
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
-            .overrideConfiguration(dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
+            .overrideConfiguration(
+                dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
             .build();
 
     final S3Client s3ClientDifferentRegion =
-       S3Client.builder()
+        S3Client.builder()
             .region(DIFFERENT_REGION_BUCKET_REGION)
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
-            .overrideConfiguration(dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
+            .overrideConfiguration(
+                dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
             .build();
 
     final Runnable sameRegionBucketTask1 =
@@ -239,7 +241,8 @@ class BucketTester {
           bucketRegion.toString());
     }
 
-    final Path multipartContents = Path.of(ClassLoader.getSystemClassLoader().getResource("multipart.txt").getPath());
+    final Path multipartContents =
+        Path.of(ClassLoader.getSystemClassLoader().getResource("multipart.txt").getPath());
     uploadStringsInParts(
         s3Client, bucketName, multipartObjectKey, multipartContents, multipartFinalContents);
     final String downloadedMultipartContent =
