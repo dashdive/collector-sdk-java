@@ -2,7 +2,6 @@ package com.ddtest;
 
 import com.dashdive.Dashdive;
 import com.dashdive.ImmutableS3EventAttributes;
-import com.dashdive.S3EventAttributeExtractorFactory;
 import com.dashdive.internal.DashdiveConnection;
 import java.net.URI;
 import java.nio.file.Path;
@@ -78,10 +77,9 @@ public class Main {
     final Dashdive dashdive =
         Dashdive.builder()
             .apiKey(API_KEY)
-            .s3EventAttributeExtractorFactory(
-                S3EventAttributeExtractorFactory.from(
-                    (input) ->
-                        ImmutableS3EventAttributes.builder().customerId("dummy-customer").build()))
+            .s3EventAttributeExtractor(
+                (input) ->
+                    ImmutableS3EventAttributes.builder().customerId("dummy-customer").build())
             .build();
 
     // Assumes credentials are set in env before run
