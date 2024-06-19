@@ -37,8 +37,8 @@ publishing {
                     }
                 }
                 scm {
-                    connection = "scm:git:git://example.com/my-library.git"
-                    developerConnection = "scm:git:ssh://example.com/my-library.git"
+                    connection = "scm:git:git://github.com/dashdive/collector-sdk-java.git"
+                    developerConnection = "scm:git:ssh://github.com/dashdive/collector-sdk-java.git"
                     url = "http://docs.dashdive.com/collector-sdk/"
                 }
             }
