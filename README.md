@@ -63,8 +63,7 @@ Dashdive dashdive =
     Dashdive.builder()
         .apiKey("<api_key>") // Load your API key from a secure location
         .s3EventAttributeExtractor(new CustomExtractor()) // Or, more concisely, with a lambda function
-        .shutdownGracePeriod(
-            Optional.empty()) // Equivalent to leaving blank; ensures all events are sent
+        .shutdownGracePeriod(Optional.empty()) // Equivalent to leaving blank; ensures all events are sent
         .build();
 
 S3Client s3Client =

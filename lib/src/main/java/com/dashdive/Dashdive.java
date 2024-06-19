@@ -324,11 +324,19 @@ public class Dashdive implements AutoCloseable {
    *      .build()
    * }</pre>
    *
+   * <b>NOTE</b>:
+   *
+   * <ul>
+   *   <li>This method creates an entirely new {@link ClientOverrideConfiguration}, so any existing
+   *       override configuration on the client builder will be erased, if previously set.
+   *   <li>Once this method is called on the client builder, subsequent calls to {@link
+   *       S3ClientBuilder#overrideConfiguration(ClientOverrideConfiguration)} will erase the
+   *       interceptor.
+   * </ul>
+   *
    * @param clientBuilder the S3 client builder to add the interceptor to
    * @return the provided S3 client builder with the Dashdive S3 event interceptor added
    */
-  // Once this method is called on the `clientBuilder`, the caller should not
-  // call `clientBuilder.overrideConfiguration(...)` again, or the interceptor will be erased.
   public S3ClientBuilder withNewOverrideConfigHavingInstrumentation(
       final S3ClientBuilder clientBuilder) {
     final ClientOverrideConfiguration newOverrideConfig =
