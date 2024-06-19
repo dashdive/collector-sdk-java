@@ -302,7 +302,7 @@ public class Dashdive implements AutoCloseable {
    * @param overrideConfigBuilder the configuration builder to add the interceptor to
    * @return the provided configuration builder with the Dashdive S3 event interceptor added
    */
-  public ClientOverrideConfiguration.Builder withInterceptor(
+  public ClientOverrideConfiguration.Builder addInterceptor(
       final ClientOverrideConfiguration.Builder overrideConfigBuilder) {
     return addInterceptorIdempotentlyTo(overrideConfigBuilder);
   }
@@ -315,12 +315,12 @@ public class Dashdive implements AutoCloseable {
    *
    * <pre>{@code
    * // Convenient version
-   * S3Client s3Client = dashdive.withNewOverrideConfigHavingInstrumentation(S3Client.builder()).build()
+   * S3Client s3Client = dashdive.addConfigWithInterceptor(S3Client.builder()).build()
    *
    * // Verbose version
    * S3Client s3Client = S3Client.builder()
    *      .overrideConfiguration(
-   *            dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
+   *            dashdive.addInterceptor(ClientOverrideConfiguration.builder()).build())
    *      .build()
    * }</pre>
    *
@@ -337,8 +337,7 @@ public class Dashdive implements AutoCloseable {
    * @param clientBuilder the S3 client builder to add the interceptor to
    * @return the provided S3 client builder with the Dashdive S3 event interceptor added
    */
-  public S3ClientBuilder withNewOverrideConfigHavingInstrumentation(
-      final S3ClientBuilder clientBuilder) {
+  public S3ClientBuilder addConfigWithInterceptor(final S3ClientBuilder clientBuilder) {
     final ClientOverrideConfiguration newOverrideConfig =
         addInterceptorIdempotentlyTo(ClientOverrideConfiguration.builder()).build();
     return clientBuilder.overrideConfiguration(newOverrideConfig);

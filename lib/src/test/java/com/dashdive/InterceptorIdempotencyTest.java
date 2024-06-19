@@ -52,25 +52,23 @@ public class InterceptorIdempotencyTest {
     ClientOverrideConfiguration.Builder combinedOverrideConfigurationBuilder =
         ClientOverrideConfiguration.builder().headers(Map.of("dummy-key", List.of("dummy-value")));
     combinedOverrideConfigurationBuilder =
-        dashdive.withInterceptor(combinedOverrideConfigurationBuilder);
+        dashdive.addInterceptor(combinedOverrideConfigurationBuilder);
     combinedOverrideConfigurationBuilder =
-        dashdive.withInterceptor(combinedOverrideConfigurationBuilder);
+        dashdive.addInterceptor(combinedOverrideConfigurationBuilder);
     S3ClientBuilder combinedS3ClientBuilder =
         S3Client.builder()
             .region(Region.US_WEST_1)
             .overrideConfiguration(combinedOverrideConfigurationBuilder.build());
-    combinedS3ClientBuilder =
-        dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
-    combinedS3ClientBuilder =
-        dashdive.withNewOverrideConfigHavingInstrumentation(combinedS3ClientBuilder);
+    combinedS3ClientBuilder = dashdive.addConfigWithInterceptor(combinedS3ClientBuilder);
+    combinedS3ClientBuilder = dashdive.addConfigWithInterceptor(combinedS3ClientBuilder);
     final S3Client combinedS3Client = combinedS3ClientBuilder.build();
 
     ClientOverrideConfiguration.Builder interceptorOverrideConfigurationBuilder =
         ClientOverrideConfiguration.builder();
     interceptorOverrideConfigurationBuilder =
-        dashdive.withInterceptor(interceptorOverrideConfigurationBuilder);
+        dashdive.addInterceptor(interceptorOverrideConfigurationBuilder);
     interceptorOverrideConfigurationBuilder =
-        dashdive.withInterceptor(interceptorOverrideConfigurationBuilder);
+        dashdive.addInterceptor(interceptorOverrideConfigurationBuilder);
     final S3Client interceptorS3Client =
         S3Client.builder()
             .region(Region.US_EAST_1)
@@ -79,9 +77,9 @@ public class InterceptorIdempotencyTest {
 
     S3ClientBuilder instrumentationS3ClientBuilder = S3Client.builder().region(Region.EU_CENTRAL_1);
     instrumentationS3ClientBuilder =
-        dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
+        dashdive.addConfigWithInterceptor(instrumentationS3ClientBuilder);
     instrumentationS3ClientBuilder =
-        dashdive.withNewOverrideConfigHavingInstrumentation(instrumentationS3ClientBuilder);
+        dashdive.addConfigWithInterceptor(instrumentationS3ClientBuilder);
     final S3Client instrumentationS3Client = instrumentationS3ClientBuilder.build();
 
     final List<ExecutionInterceptor> combinedList =

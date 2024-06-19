@@ -49,7 +49,7 @@ class ErrorsTelemetryTest {
         S3Client.builder()
             .region(Region.EU_CENTRAL_1)
             .overrideConfiguration(
-                dashdive.withInterceptor(ClientOverrideConfiguration.builder()).build())
+                dashdive.addInterceptor(ClientOverrideConfiguration.builder()).build())
             .build();
 
     final String uuid = "bac79f5b-a302-4ad9-af79-6bf96f9446be";
