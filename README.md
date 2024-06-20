@@ -18,11 +18,17 @@ Local publishing works out of the box with the following command:
 gradle :lib:publishToMavenLocal
 ```
 
-Depending on your build system, you may need to create a different task in `lib/build.gradle.kts`.
+Or, you can directly generate the compiled JAR, sources JAR, and Javadoc using each of the following:
+
+```bash
+gradle :lib:jar :lib:sourcesJar :lib:javadoc
+```
+
+Depending on your build system, you may find it convenient to create a different task in `lib/build.gradle.kts`.
 
 ## API
 
-Full Javadoc reference is available [here](docs.dashdive.com).
+The full Javadoc reference is available [at this link](https://www.javadoc.io/doc/com.dashdive/collector-sdk/latest/com/dashdive/package-summary.html).
 
 ### Example Usage
 

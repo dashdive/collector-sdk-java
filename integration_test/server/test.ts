@@ -56,7 +56,7 @@ function parseClientRequests(clientRequests: ClientRequest[]): RequestsByRoute {
   return requestsByRoute;
 }
 
-// Example: `pnpm test -- --sdk-version=1.0.0`
+// Example: `pnpm test -- --sdk-version=0.0.1 --run-type=cloud`
 const parser = new ArgumentParser({
   description: "Jest test for client requests.",
 });
