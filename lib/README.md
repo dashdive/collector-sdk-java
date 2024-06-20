@@ -13,6 +13,8 @@ As described in the [official](https://central.sonatype.org/publish/publish-guid
 
 ### Recurring Setup (Checklist)
 
+**NOTE**: If the integration tests are failing, either locally or in the cloud, with an error about incompatible Java version variants, this may be due to outdated builds in the local Maven repository. Delete the `dashdive` folder in the local Maven repository (usually at `~/.m2/repository/com/dashdive`) and try again. Also ensure that the correct SDK versions are specified in the integration test client Gradle build script.
+
 1. Run local unit tests, local integration tests, and cloud integration tests with the current local build:
 
    ```bash
@@ -42,7 +44,7 @@ As described in the [official](https://central.sonatype.org/publish/publish-guid
    ORG_GRADLE_PROJECT_signingInMemoryKeyPassword='<password>' \
    ORG_GRADLE_PROJECT_mavenCentralUsername='<username>' \
    ORG_GRADLE_PROJECT_mavenCentralPassword='<password>' \
-       gradle :lib:publishToMavenCentral --no-configuration-cache
+      gradle :lib:publishToMavenCentral --no-configuration-cache
    ```
 
 1. Re-run the local and cloud integration tests with the deployed staging build:
