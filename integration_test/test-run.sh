@@ -38,10 +38,15 @@ while getopts "c" opt; do
 done
 CENTRAL_MANUAL="${CENTRAL_MANUAL:-false}"
 # if central manual is true, ensure bearer token is set
-if [[ $CENTRAL_MANUAL != "true" ]]; then
+if [[ $CENTRAL_MANUAL == "true" ]]; then
   if [[ -z ${BEARER_TOKEN+x} ]]; then
     echo 'BEARER_TOKEN must be set when running in "Central Manual Testing" mode'
+    exit 1
+  fi
 fi
+
+
+echo "Running integration test in $RUN_TYPE mode (central_manual=$CENTRAL_MANUAL)"
 
 # Build and "publish" the library from source to local Maven repo
 pushd .. > /dev/null
@@ -68,15 +73,17 @@ popd > /dev/null
 pushd .. > /dev/null
 RUN_COMMAND=
 if [[ $CENTRAL_MANUAL == "true" ]]; then
-    RUN_COMMAND="BEARER_TOKEN=$BEARER_TOKEN gradle clean :integration_test:client:runCentralManual"
+    RUN_COMMAND="gradle clean :integration_test:client:runCentralManual"
 else
     RUN_COMMAND="gradle clean :integration_test:client:run"
 fi
 
 if [[ $RUN_TYPE == "local" ]]; then
-    AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id) \
-    AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key) \
-        $RUN_COMMAND
+    AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
+    AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
+    export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY BEARER_TOKEN
+    
+    $RUN_COMMAND
 else
     $RUN_COMMAND
 fi

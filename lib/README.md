@@ -49,10 +49,10 @@ As described in the [official](https://central.sonatype.org/publish/publish-guid
 
    ```bash
    # Local integration tests
-   BEARER_TOKEN=<sonatype_bearer> ./integration_test/test-run.sh local -c
+   BEARER_TOKEN="<sonatype_bearer>" ./integration_test/test-run.sh local -c
 
    # Cloud integration tests (from inside EC2 instance)
-   BEARER_TOKEN=<sonatype_bearer> ./integration_test/test-run.sh cloud -c
+   BEARER_TOKEN="<sonatype_bearer>" ./integration_test/test-run.sh cloud -c
    ```
 
 1. Release the build to Maven Central (**IRREVERSIBLE**).

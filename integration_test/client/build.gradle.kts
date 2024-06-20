@@ -45,7 +45,7 @@ java {
 
 val awsJavaSdkVersion = "2.17.3"
 val dashdiveSdkVersion_centralManualTesting = "1.0.0-rc1"
-val dashdiveSdkVersion_allOtherTasks = "1.0.0"
+val dashdiveSdkVersion_allOtherTasks = "1.0.0-rc1"
 val dashdiveSdkVersion = if (project.containsTask("runCentralManual")) {
     dashdiveSdkVersion_centralManualTesting
 } else {
