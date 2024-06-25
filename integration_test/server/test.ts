@@ -325,18 +325,26 @@ describe("Confirm test client requests", () => {
     }
   });
 
-  test("All route/method pairs are expected", () => {
-    const expectedRequestTypes = new Set([
+  test("Received exactly the expected route/method pairs (no more, no less)", () => {
+    // Right now, we expect all but "/telemetry/invalidApiKey"
+    const expectedRequestTypes = [
       "GET:/s3/recommendedBatchSize",
       "GET:/ping",
       "POST:/telemetry/lifecycle",
       "POST:/s3/batch",
       "POST:/telemetry/extractionIssues",
       "POST:/telemetry/metricsIncremental",
-    ]);
-    for (const serializedRequest of Object.keys(requestsByRoute)) {
-      expect(expectedRequestTypes.has(serializedRequest)).toBeTruthy();
-    }
+    ];
+    const actualRequestTypes = Object.keys(requestsByRoute);
+
+    const expectedAndNotFound = expectedRequestTypes.filter(
+      (reqType) => !actualRequestTypes.includes(reqType)
+    );
+    const foundAndNotExpected = actualRequestTypes.filter(
+      (reqType) => !expectedRequestTypes.includes(reqType)
+    );
+    expect(expectedAndNotFound).toEqual([]);
+    expect(foundAndNotExpected).toEqual([]);
   });
 
   test("/ping and /recommendedBatchSize called as expected", () => {
