@@ -1,9 +1,23 @@
+# Build
 **/.gradle
 **/build
 **/bin
 
+# "Secrets"
 **/*.pem
 integration_test/client/src/main/resources/multipart.txt
 
+# Local
 **/.DS_Store
 **/.vscode
+
+# Required Jenkins .gitignore for Rhombus
+# See: https://app.clickup.com/36085281/docs/12d7h1-780/12d7h1-15131 ("Bringing Up New Projects")
+/.gradle/
+/bin/
+/build/
+/.settings/
+.classpath
+.project
+/.vscode/
+/.idea/

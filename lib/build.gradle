@@ -1,56 +1,18 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
-// import com.vanniktech.maven.publish.SonatypeHost
-// import com.vanniktech.maven.publish.JavaLibrary
-// import com.vanniktech.maven.publish.JavadocJar
 
 plugins {
-    id 'java-library'
-    // https://central.sonatype.org/publish/publish-portal-gradle/
-    id 'com.vanniktech.maven.publish' version '0.27.0'
+    id "java-library"
+    id "eclipse"
+    id "maven-publish"
+    id "com.rhombus.version" version '1.0.7'
 }
 
-def dashdiveCurrentVersion = '1.0.0-rc1'
+apply from: "https://nexus.rhombus.corp/repository/maven/com/rhombus/gradle/gradle-library/1.0.36/gradle-library-1.0.36.gradle"
 
-// mavenPublishing {
-//     configure(new JavaLibrary(
-//         JavadocJar.Javadoc(),
-//         true
-//     ))
-
-//     coordinates('com.dashdive', 'collector-sdk', dashdiveCurrentVersion)
-
-//     pom {
-//         name = 'Dashdive Collector SDK'
-//         description = 'The Dashdive Collector SDK makes it easy to collect cloud usage data by instrumenting Java clients for popular cloud services, such as AWS S3.'
-//         url = 'http://docs.dashdive.com/collector-sdk/'
-//         licenses {
-//             license {
-//                 name = 'The Apache License, Version 2.0'
-//                 url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-//                 distribution = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-//             }
-//         }
-//         developers {
-//             developer {
-//                 id = 'adamshugar'
-//                 name = 'Adam Shugar'
-//                 email = 'adam@dashdive.com'
-//             }
-//         }
-//         scm {
-//             url = 'http://docs.dashdive.com/collector-sdk/'
-//             connection = 'scm:git:git://github.com/dashdive/collector-sdk-java.git'
-//             developerConnection = 'scm:git:ssh://github.com/dashdive/collector-sdk-java.git'
-//         }
-//     }
-
-//     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-//     gradle.taskGraph.whenReady { taskGraph ->
-//         if (!taskGraph.allTasks.any { it.name == 'publishToMavenLocal' }) {
-//             signAllPublications()
-//         }
-//     }
-// }
+ext {
+    dashdiveSdkVersion = "1.0.0" 
+    awsJavaSdkVersion = "2.17.3"
+}
 
 // tasks.named('generateMetadataFileForMavenPublication') {
 //     dependsOn('plainJavadocJar')
@@ -68,7 +30,7 @@ javadoc {
         file('build/generated/sources/annotationProcessor/java/main')
     ).asFileTree
 
-    title = "Dashdive Collector SDK - ${dashdiveCurrentVersion}"
+    title = "Dashdive Collector SDK - ${dashdiveSdkVersion}"
     
     options {
         links(
@@ -81,21 +43,13 @@ tasks.named('build') {
     dependsOn('javadoc')
 }
 
-repositories {
-    mavenCentral()
-}
-
-ext {
-    awsJavaSdkVersion = '2.17.3'
-}
-
 dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.mockito:mockito-core:5.10.0'
 
-    implementation platform("software.amazon.awssdk:bom:${awsJavaSdkVersion}")
-    implementation 'software.amazon.awssdk:s3'
+    api platform("software.amazon.awssdk:bom:${awsJavaSdkVersion}")
+    api 'software.amazon.awssdk:s3'
     
     implementation 'org.slf4j:slf4j-api:1.7.25'
     runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
