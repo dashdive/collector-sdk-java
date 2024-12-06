@@ -1,5 +1,9 @@
 **/.gradle
 **/build
-**/.DS_Store
+lib/bin
+
 **/*.pem
 integration_test/client/src/main/resources/multipart.txt
+
+**/.DS_Store
+**/.vscode

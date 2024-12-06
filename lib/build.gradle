@@ -1,0 +1,160 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+// import com.vanniktech.maven.publish.SonatypeHost
+// import com.vanniktech.maven.publish.JavaLibrary
+// import com.vanniktech.maven.publish.JavadocJar
+
+plugins {
+    id 'java-library'
+    // https://central.sonatype.org/publish/publish-portal-gradle/
+    id 'com.vanniktech.maven.publish' version '0.27.0'
+}
+
+def dashdiveCurrentVersion = '1.0.0-rc1'
+
+// mavenPublishing {
+//     configure(new JavaLibrary(
+//         JavadocJar.Javadoc(),
+//         true
+//     ))
+
+//     coordinates('com.dashdive', 'collector-sdk', dashdiveCurrentVersion)
+
+//     pom {
+//         name = 'Dashdive Collector SDK'
+//         description = 'The Dashdive Collector SDK makes it easy to collect cloud usage data by instrumenting Java clients for popular cloud services, such as AWS S3.'
+//         url = 'http://docs.dashdive.com/collector-sdk/'
+//         licenses {
+//             license {
+//                 name = 'The Apache License, Version 2.0'
+//                 url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+//                 distribution = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+//             }
+//         }
+//         developers {
+//             developer {
+//                 id = 'adamshugar'
+//                 name = 'Adam Shugar'
+//                 email = 'adam@dashdive.com'
+//             }
+//         }
+//         scm {
+//             url = 'http://docs.dashdive.com/collector-sdk/'
+//             connection = 'scm:git:git://github.com/dashdive/collector-sdk-java.git'
+//             developerConnection = 'scm:git:ssh://github.com/dashdive/collector-sdk-java.git'
+//         }
+//     }
+
+//     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+//     gradle.taskGraph.whenReady { taskGraph ->
+//         if (!taskGraph.allTasks.any { it.name == 'publishToMavenLocal' }) {
+//             signAllPublications()
+//         }
+//     }
+// }
+
+// tasks.named('generateMetadataFileForMavenPublication') {
+//     dependsOn('plainJavadocJar')
+// }
+
+javadoc {
+    dependsOn('compileJava')
+    
+    destinationDir = file('build/docs/javadoc')
+    include 'com/dashdive/*.java'
+    exclude 'com/dashdive/internal/**'
+
+    source = files(
+        sourceSets.main.java.srcDirs,
+        file('build/generated/sources/annotationProcessor/java/main')
+    ).asFileTree
+
+    title = "Dashdive Collector SDK - ${dashdiveCurrentVersion}"
+    
+    options {
+        links(
+            'https://docs.oracle.com/en/java/javase/11/docs/api/',
+            'https://sdk.amazonaws.com/java/api/latest/')
+    }
+}
+
+tasks.named('build') {
+    dependsOn('javadoc')
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    awsJavaSdkVersion = '2.17.3'
+}
+
+dependencies {
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.mockito:mockito-core:5.10.0'
+
+    implementation platform("software.amazon.awssdk:bom:${awsJavaSdkVersion}")
+    implementation 'software.amazon.awssdk:s3'
+    
+    implementation 'org.slf4j:slf4j-api:1.7.25'
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
+
+    implementation 'org.apache.commons:commons-lang3:3.14.0'
+
+    implementation platform('com.fasterxml.jackson:jackson-bom:2.16.2')
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+
+    implementation 'com.google.guava:guava:32.1.3-jre'
+
+    def immutablesVersion = '2.10.1'
+    annotationProcessor "org.immutables:value:${immutablesVersion}"
+    testAnnotationProcessor "org.immutables:value:${immutablesVersion}"
+    implementation "org.immutables:value:${immutablesVersion}"
+    implementation "org.immutables:builder:${immutablesVersion}"
+}
+
+boolean isImplemented_ServiceClientConfig() {
+    def versionParts = awsJavaSdkVersion.split('\\.')
+    def majorVersion = versionParts[0].toInteger()
+    def minorVersion = versionParts.size() > 1 ? versionParts[1].toInteger() : 0
+    def patchVersion = versionParts.size() > 2 ? versionParts[2].toInteger() : 0
+    return majorVersion >= 2 && minorVersion >= 20 && patchVersion >= 32
+}
+
+void excludeConditionally(SourceSet sourceSet, Closure condition, String... paths) {
+    if (condition()) {
+        sourceSet.java.exclude(paths)
+    }
+}
+
+sourceSets {
+    test {
+        excludeConditionally(
+            it,
+            { !isImplemented_ServiceClientConfig() },
+            '**/InterceptorIdempotencyTest.java'
+        )
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+task formatSource(type: Exec) {
+    commandLine 'sh', '-c', 'find src -name "*.java" -exec google-java-format -r {} +'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+        exceptionFormat = TestExceptionFormat.FULL
+    }
+    // Necessary to silence Mockito warnings: https://github.com/mockito/mockito/issues/3037
+    jvmArgs '-XX:+EnableDynamicAgentLoading'
+}
