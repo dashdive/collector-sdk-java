@@ -1,6 +1,6 @@
 **/.gradle
 **/build
-lib/bin
+**/bin
 
 **/*.pem
 integration_test/client/src/main/resources/multipart.txt
