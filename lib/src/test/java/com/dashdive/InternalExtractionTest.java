@@ -1,6 +1,6 @@
 package com.dashdive;
 
-import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ConnectionUtils;
 import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
 import com.dashdive.internal.ImmutableSetupDefaults;
 import com.dashdive.internal.SetupDefaults;
@@ -54,6 +54,7 @@ public class InternalExtractionTest {
 
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
@@ -103,7 +104,8 @@ public class InternalExtractionTest {
     final List<String> batchIngestBodies =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
     batchMockHttpClient.assertAllUrisMatch(
-        DashdiveConnection.getRoute(DashdiveConnection.Route.S3_BATCH_INGEST).getPath());
+        ConnectionUtils.getFullUri(
+            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST).getPath());
     final List<Map<String, Object>> ingestedEvents =
         TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
 
@@ -294,7 +296,8 @@ public class InternalExtractionTest {
     final MockHttpClient batchMockHttpClient = sendSingleEvent("extraction_exception", context);
 
     batchMockHttpClient.assertAllUrisMatch(
-        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES)
+        ConnectionUtils.getFullUri(
+            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES)
             .getPath());
     final List<String> issueEventStrings =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();

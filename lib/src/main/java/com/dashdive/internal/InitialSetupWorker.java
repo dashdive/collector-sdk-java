@@ -16,6 +16,7 @@ import com.google.common.collect.MultimapBuilder;
 import com.google.common.collect.Multimaps;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -39,10 +40,11 @@ public class InitialSetupWorker implements Runnable {
   private static final String IMDS_BASE_PATH = "/latest/meta-data/";
 
   private static final String partialUserAgent =
-      DashdiveConnection.Headers.getUserAgent(
+      ConnectionUtils.Headers.getUserAgent(
           Optional.empty(), Optional.of(Dashdive.VERSION), Optional.empty());
   private final HttpClient httpClient;
   private final String apiKey;
+  private final URI ingestBaseUri;
 
   private final Optional<SetupDefaults> skipSetupWithDefaults;
   private final boolean shouldSkipImdsQueries;
@@ -57,6 +59,7 @@ public class InitialSetupWorker implements Runnable {
   public InitialSetupWorker(
       HttpClient httpClient,
       String apiKey,
+      URI ingestBaseUri,
       Optional<SetupDefaults> skipSetupWithDefaults,
       boolean shouldSkipImdsQueries,
       AtomicBoolean isInitialized,
@@ -65,6 +68,7 @@ public class InitialSetupWorker implements Runnable {
       Optional<Runnable> postSetupAction) {
     this.httpClient = httpClient;
     this.apiKey = apiKey;
+    this.ingestBaseUri = ingestBaseUri;
 
     this.skipSetupWithDefaults = skipSetupWithDefaults;
     this.shouldSkipImdsQueries = shouldSkipImdsQueries;
@@ -83,9 +87,8 @@ public class InitialSetupWorker implements Runnable {
     }
   }
 
-  private static TelemetryPayload checkIngestConnectionWithLogging(
-      String apiKey, HttpClient httpClient) {
-    final boolean isApiKeyFormatValid = DashdiveConnection.APIKey.isValid(apiKey);
+  private TelemetryPayload checkIngestConnectionWithLogging() {
+    final boolean isApiKeyFormatValid = ConnectionUtils.APIKey.isValid(apiKey);
     if (!isApiKeyFormatValid) {
       logger.error("Invalid API key format: '{}'", apiKey);
       return TelemetryPayload.from(
@@ -97,13 +100,13 @@ public class InitialSetupWorker implements Runnable {
 
     final HttpRequest pingRequest =
         HttpRequest.newBuilder()
-            .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.PING))
-            .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
-            .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
+            .uri(ConnectionUtils.getFullUri(ingestBaseUri, ConnectionUtils.Route.PING))
+            .header(ConnectionUtils.Headers.KEY__USER_AGENT, partialUserAgent)
+            .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
             .GET()
             .build();
     try {
-      final HttpResponse<String> pingResponse = DashdiveConnection.send(httpClient, pingRequest);
+      final HttpResponse<String> pingResponse = ConnectionUtils.send(httpClient, pingRequest);
       final boolean didSucceed = pingResponse.statusCode() == HttpURLConnection.HTTP_OK;
       if (!didSucceed) {
         final ImmutableMap<String, Object> pingResponseParsed =
@@ -152,8 +155,8 @@ public class InitialSetupWorker implements Runnable {
     return TelemetryPayload.of();
   }
 
-  private void checkIngestConnectionWithReporting(String apiKey, HttpClient httpClient) {
-    final TelemetryPayload checkIngestErrors = checkIngestConnectionWithLogging(apiKey, httpClient);
+  private void checkIngestConnectionWithReporting() {
+    final TelemetryPayload checkIngestErrors = checkIngestConnectionWithLogging();
     if (!checkIngestErrors.isEmpty()) {
       try {
         final TelemetryEvent.InvalidApiKey invalidApiKeyPayload =
@@ -162,20 +165,20 @@ public class InitialSetupWorker implements Runnable {
                 .apiKey(apiKey)
                 .errors(checkIngestErrors)
                 .build();
-        final ObjectMapper objectMapper = DashdiveConnection.DEFAULT_SERIALIZER;
+        final ObjectMapper objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
         final String requestBodyJson = objectMapper.writeValueAsString(invalidApiKeyPayload);
         final HttpRequest invalidApiKeyRequest =
             HttpRequest.newBuilder()
-                .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_API_KEY))
+                .uri(ConnectionUtils.getFullUri(ingestBaseUri, ConnectionUtils.Route.TELEMETRY_API_KEY))
                 .header(
-                    DashdiveConnection.Headers.KEY__CONTENT_TYPE,
-                    DashdiveConnection.Headers.VAL__CONTENT_JSON)
-                .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
+                    ConnectionUtils.Headers.KEY__CONTENT_TYPE,
+                    ConnectionUtils.Headers.VAL__CONTENT_JSON)
+                .header(ConnectionUtils.Headers.KEY__USER_AGENT, partialUserAgent)
                 // No API key header since, by virtue of this code path, there was an API key issue
                 .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
                 .build();
 
-        DashdiveConnection.send(httpClient, invalidApiKeyRequest);
+        ConnectionUtils.send(httpClient, invalidApiKeyRequest);
       } catch (IOException | InterruptedException ignored) {
       }
     }
@@ -192,18 +195,18 @@ public class InitialSetupWorker implements Runnable {
     ;
   }
 
-  private static BatchSizeResult getTargetEventBatchSize(String apiKey, HttpClient httpClient) {
+  private BatchSizeResult getTargetEventBatchSize() {
     final HttpRequest targetBatchSizeRequest =
         HttpRequest.newBuilder()
-            .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.S3_RECOMMENDED_BATCH_SIZE))
-            .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
-            .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
+            .uri(ConnectionUtils.getFullUri(ingestBaseUri, ConnectionUtils.Route.S3_RECOMMENDED_BATCH_SIZE))
+            .header(ConnectionUtils.Headers.KEY__USER_AGENT, partialUserAgent)
+            .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
             .GET()
             .build();
 
     try {
       final HttpResponse<String> targetBatchSizeResponse =
-          DashdiveConnection.send(httpClient, targetBatchSizeRequest);
+          ConnectionUtils.send(httpClient, targetBatchSizeRequest);
       final boolean didSucceed = targetBatchSizeResponse.statusCode() == HttpURLConnection.HTTP_OK;
       final int targetEventBatchSize =
           didSucceed
@@ -328,9 +331,9 @@ public class InitialSetupWorker implements Runnable {
     instanceInfoBuilder.logicalProcessorCount(Runtime.getRuntime().availableProcessors());
 
     CompletableFuture<Void> checkIngestFuture =
-        CompletableFuture.runAsync(() -> checkIngestConnectionWithReporting(apiKey, httpClient));
+        CompletableFuture.runAsync(() -> checkIngestConnectionWithReporting());
     CompletableFuture<BatchSizeResult> batchSizeFuture =
-        CompletableFuture.supplyAsync(() -> getTargetEventBatchSize(apiKey, httpClient));
+        CompletableFuture.supplyAsync(() -> getTargetEventBatchSize());
     CompletableFuture<GetAwsImdsDataResult> imdsDataFuture =
         shouldSkipImdsQueries
             ? CompletableFuture.completedFuture(
@@ -415,7 +418,7 @@ public class InitialSetupWorker implements Runnable {
     this.runPostSetupActionIdempotently();
 
     try {
-      final ObjectMapper objectMapper = DashdiveConnection.DEFAULT_SERIALIZER;
+      final ObjectMapper objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
       final TelemetryEvent.LifecycleStartup startupPayload =
           ImmutableTelemetryEvent.LifecycleStartup.builder()
               .instanceId(instanceInfo.get().classInstanceId().orElse(""))
@@ -425,15 +428,16 @@ public class InitialSetupWorker implements Runnable {
       final String requestBodyJson = objectMapper.writeValueAsString(startupPayload);
       final HttpRequest startupTelemetryRequest =
           HttpRequest.newBuilder()
-              .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE))
+              .uri(ConnectionUtils.getFullUri(
+                  ingestBaseUri, ConnectionUtils.Route.TELEMETRY_LIFECYCLE))
               .header(
-                  DashdiveConnection.Headers.KEY__CONTENT_TYPE,
-                  DashdiveConnection.Headers.VAL__CONTENT_JSON)
-              .header(DashdiveConnection.Headers.KEY__USER_AGENT, partialUserAgent)
-              .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
+                  ConnectionUtils.Headers.KEY__CONTENT_TYPE,
+                  ConnectionUtils.Headers.VAL__CONTENT_JSON)
+              .header(ConnectionUtils.Headers.KEY__USER_AGENT, partialUserAgent)
+              .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
               .build();
-      DashdiveConnection.send(httpClient, startupTelemetryRequest);
+      ConnectionUtils.send(httpClient, startupTelemetryRequest);
     } catch (IOException | InterruptedException ignored) {
     }
   }

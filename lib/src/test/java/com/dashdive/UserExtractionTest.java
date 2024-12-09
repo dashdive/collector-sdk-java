@@ -1,6 +1,6 @@
 package com.dashdive;
 
-import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ConnectionUtils;
 import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
 import com.dashdive.internal.ImmutableSetupDefaults;
 import com.dashdive.internal.SetupDefaults;
@@ -64,6 +64,7 @@ public class UserExtractionTest {
             .build();
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.empty(),
             Optional.empty(),
@@ -82,7 +83,8 @@ public class UserExtractionTest {
     dashdive.blockUntilShutdownComplete();
 
     final String extractionIssuesPath =
-        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
+        ConnectionUtils.getFullUri(
+            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
     final List<Optional<String>> extractionIssuesReqBodies =
         batchMockHttpClient.getRequests().stream()
             .filter(req -> extractionIssuesPath.equals(req.request().uri().getPath()))
@@ -115,6 +117,7 @@ public class UserExtractionTest {
             .build();
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(factoryReturningNull),
             Optional.empty(),
@@ -133,7 +136,8 @@ public class UserExtractionTest {
     dashdive.blockUntilShutdownComplete();
 
     final String extractionIssuesPath =
-        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
+        ConnectionUtils.getFullUri(
+            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
     final List<Optional<String>> extractionIssuesReqBodies =
         batchMockHttpClient.getRequests().stream()
             .filter(req -> extractionIssuesPath.equals(req.request().uri().getPath()))
@@ -179,6 +183,7 @@ public class UserExtractionTest {
             .build();
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(factoryWithFeatureId),
             Optional.empty(),
@@ -202,7 +207,8 @@ public class UserExtractionTest {
     final List<String> batchIngestBodies =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
     batchMockHttpClient.assertAllUrisMatch(
-        DashdiveConnection.getRoute(DashdiveConnection.Route.S3_BATCH_INGEST).getPath());
+        ConnectionUtils.getFullUri(
+            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST).getPath());
     final List<Map<String, Object>> ingestedEvents =
         TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
 

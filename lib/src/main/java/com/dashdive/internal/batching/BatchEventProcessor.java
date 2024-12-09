@@ -2,8 +2,8 @@ package com.dashdive.internal.batching;
 
 import com.dashdive.Dashdive;
 import com.dashdive.S3EventAttributeExtractor;
-import com.dashdive.internal.DashdiveConnection;
-import com.dashdive.internal.DashdiveConnection.BackoffSendConfig;
+import com.dashdive.internal.ConnectionUtils;
+import com.dashdive.internal.ConnectionUtils.BackoffSendConfig;
 import com.dashdive.internal.DashdiveInstanceInfo;
 import com.dashdive.internal.ImmutableBackoffSendConfig;
 import com.dashdive.internal.S3SingleExtractedEvent;
@@ -16,6 +16,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -90,6 +91,7 @@ public class BatchEventProcessor {
   private final HttpClient httpClient;
   private String userAgent;
   private final String apiKey;
+  private final URI ingestBaseUri;
   private final ObjectMapper objectMapper;
 
   private final AtomicReference<DashdiveInstanceInfo> instanceInfo;
@@ -110,6 +112,7 @@ public class BatchEventProcessor {
   public BatchEventProcessor(
       AtomicReference<DashdiveInstanceInfo> instanceInfo,
       String apiKey,
+      URI ingestBaseUri,
       S3EventAttributeExtractor s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
       // TODO: It may be the case that Java 11's HttpClient is not thread safe,
@@ -118,12 +121,13 @@ public class BatchEventProcessor {
       // own manager threads.
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient) {
-    this.metrics = new EventPipelineMetrics(instanceInfo, apiKey, metricsHttpClient);
+    this.metrics = new EventPipelineMetrics(instanceInfo, apiKey, ingestBaseUri, metricsHttpClient);
     this.httpClient = batchProcessorHttpClient;
     this.userAgent = "";
-    this.objectMapper = DashdiveConnection.DEFAULT_SERIALIZER;
+    this.objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
 
     this.apiKey = apiKey;
+    this.ingestBaseUri = ingestBaseUri;
     this.s3EventAttributeExtractor = s3EventAttributeExtractor;
     this.shutdownGracePeriod = shutdownGracePeriod;
 
@@ -143,7 +147,7 @@ public class BatchEventProcessor {
   private void initializeUserAgent() {
     DashdiveInstanceInfo instanceInfo = this.instanceInfo.get();
     userAgent =
-        DashdiveConnection.Headers.getUserAgent(
+        ConnectionUtils.Headers.getUserAgent(
             instanceInfo.javaVersion(),
             Optional.of(Dashdive.VERSION),
             instanceInfo.classInstanceId());
@@ -269,17 +273,18 @@ public class BatchEventProcessor {
         final String sendBatchBodyJson = objectMapper.writeValueAsString(validEvents);
         final HttpRequest sendBatchRequest =
             HttpRequest.newBuilder()
-                .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.S3_BATCH_INGEST))
+                .uri(ConnectionUtils.getFullUri(
+                    this.ingestBaseUri, ConnectionUtils.Route.S3_BATCH_INGEST))
                 .header(
-                    DashdiveConnection.Headers.KEY__CONTENT_TYPE,
-                    DashdiveConnection.Headers.VAL__CONTENT_JSON)
-                .header(DashdiveConnection.Headers.KEY__USER_AGENT, userAgent)
-                .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
+                    ConnectionUtils.Headers.KEY__CONTENT_TYPE,
+                    ConnectionUtils.Headers.VAL__CONTENT_JSON)
+                .header(ConnectionUtils.Headers.KEY__USER_AGENT, userAgent)
+                .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(sendBatchBodyJson))
                 .build();
 
         final HttpResponse<String> sendBatchResponse =
-            DashdiveConnection.sendWithExponentialBackoff(
+            ConnectionUtils.sendWithExponentialBackoff(
                 httpClient, sendBatchRequest, BACKOFF_CONFIG);
         didValidBatchRequestSucceed = sendBatchResponse.statusCode() == HttpURLConnection.HTTP_OK;
       } catch (IOException exception) {
@@ -310,16 +315,17 @@ public class BatchEventProcessor {
         final HttpRequest sendTelemetryRequest =
             HttpRequest.newBuilder()
                 .uri(
-                    DashdiveConnection.getRoute(
-                        DashdiveConnection.Route.TELEMETRY_EXTRACTION_ISSUES))
+                    ConnectionUtils.getFullUri(
+                        this.ingestBaseUri,
+                        ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES))
                 .header(
-                    DashdiveConnection.Headers.KEY__CONTENT_TYPE,
-                    DashdiveConnection.Headers.VAL__CONTENT_JSON)
-                .header(DashdiveConnection.Headers.KEY__USER_AGENT, userAgent)
-                .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
+                    ConnectionUtils.Headers.KEY__CONTENT_TYPE,
+                    ConnectionUtils.Headers.VAL__CONTENT_JSON)
+                .header(ConnectionUtils.Headers.KEY__USER_AGENT, userAgent)
+                .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(sendTelemetryBodyJson))
                 .build();
-        DashdiveConnection.sendWithExponentialBackoff(
+        ConnectionUtils.sendWithExponentialBackoff(
             httpClient, sendTelemetryRequest, BACKOFF_CONFIG);
       } catch (IOException exception) {
         logger.error("Failed to send batch of telemetry", exception);
