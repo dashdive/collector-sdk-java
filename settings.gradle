@@ -1,7 +1,7 @@
 pluginManagement {
     repositories {
-		maven { url "https://nexus.rhombus.corp/repository/gradle-plugins/"}
-		maven { url "https://nexus.rhombus.corp/repository/maven/"}
+	    maven { url "https://nexus.rhombus.corp/repository/gradle-plugins/"}
+	    maven { url "https://nexus.rhombus.corp/repository/maven/"}
     }
 }
 
