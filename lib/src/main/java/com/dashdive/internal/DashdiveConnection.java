@@ -19,7 +19,7 @@ import org.immutables.value.Value;
 public class DashdiveConnection {
   private DashdiveConnection() {}
 
-  private static final URI PROD_INGEST_BASE_URI = URI.create("https://ingest.dashdive.com");
+  private static final URI PROD_INGEST_BASE_URI = URI.create("http://ingest.dashdive.core1.rhombus.int");
   private static URI ingestBaseUri = PROD_INGEST_BASE_URI;
 
   public static void _setIngestBaseUri(URI uri) {
