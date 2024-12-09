@@ -16,23 +16,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.immutables.value.Value;
 
-public class DashdiveConnection {
-  private DashdiveConnection() {}
-
-  private static final URI PROD_INGEST_BASE_URI = URI.create("http://ingest.dashdive.core1.rhombus.int");
-  private static URI ingestBaseUri = PROD_INGEST_BASE_URI;
-
-  public static void _setIngestBaseUri(URI uri) {
-    ingestBaseUri = uri;
-  }
-
-  public static URI _getIngestBaseUri() {
-    return ingestBaseUri;
-  }
-
-  public static void _resetIngestBaseUri() {
-    ingestBaseUri = PROD_INGEST_BASE_URI;
-  }
+public class ConnectionUtils {
+  private ConnectionUtils() {}
 
   public static final ObjectMapper DEFAULT_SERIALIZER =
       new ObjectMapper().registerModule(new Jdk8Module());
@@ -93,8 +78,8 @@ public class DashdiveConnection {
     }
   }
 
-  public static URI getRoute(Route route) {
-    return ingestBaseUri.resolve(route.toString());
+  public static URI getFullUri(URI baseUri, Route route) {
+    return baseUri.resolve(route.toString());
   }
 
   public static class APIKey {

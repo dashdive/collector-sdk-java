@@ -1,6 +1,6 @@
 package com.dashdive;
 
-import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ConnectionUtils;
 import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
 import com.dashdive.internal.ImmutableSetupDefaults;
 import com.dashdive.internal.SetupDefaults;
@@ -35,6 +35,7 @@ public class ClientLifecycleTest {
             .build();
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
@@ -75,6 +76,7 @@ public class ClientLifecycleTest {
 
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             "INVALID-KEY",
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
@@ -87,7 +89,8 @@ public class ClientLifecycleTest {
     dashdive.blockUntilSetupComplete();
 
     final String fullApiKeyTelemetryPath =
-        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_API_KEY).getPath();
+        ConnectionUtils.getFullUri(
+            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_API_KEY).getPath();
     List<Optional<String>> matchingRequestBodies =
         startupMockedClient.getRequests().stream()
             .filter(req -> fullApiKeyTelemetryPath.equals(req.request().uri().getPath()))
@@ -136,6 +139,7 @@ public class ClientLifecycleTest {
             .build();
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
@@ -149,7 +153,8 @@ public class ClientLifecycleTest {
     dashdive.close();
 
     final String fullLifecycleTelemetryPath =
-        DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE).getPath();
+        ConnectionUtils.getFullUri(
+            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_LIFECYCLE).getPath();
     final List<Optional<String>> startupReqBodies =
         startupMockedClient.getRequests().stream()
             .filter(req -> fullLifecycleTelemetryPath.equals(req.request().uri().getPath()))
@@ -228,6 +233,7 @@ public class ClientLifecycleTest {
             .build();
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             shutdownGracePeriod,

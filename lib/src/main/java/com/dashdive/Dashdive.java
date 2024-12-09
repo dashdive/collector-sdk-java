@@ -1,6 +1,6 @@
 package com.dashdive;
 
-import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ConnectionUtils;
 import com.dashdive.internal.DashdiveInstanceInfo;
 import com.dashdive.internal.ImmutableDashdiveInstanceInfo;
 import com.dashdive.internal.InitialSetupWorker;
@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
@@ -57,12 +58,14 @@ class Base64UUID {
 @Value.Style(newBuilder = "builder")
 public class Dashdive implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(Dashdive.class);
+  public static final URI DEFAULT_INGEST_BASE_URI = URI.create("https://ingest.dashdive.com");
 
   /** The version of the Dashdive SDK. */
   public static final String VERSION = "1.0.0";
 
   private final String instanceId;
 
+  private final URI ingestBaseUri;
   private final String apiKey;
   private final S3RoundTripInterceptor s3RoundTripInterceptor;
   private final SingleEventBatcher singleEventBatcher;
@@ -86,6 +89,7 @@ public class Dashdive implements AutoCloseable {
   // Constructors are package-private instead of fully private for testing,
   // to allow for mocked HTTP clients
   Dashdive(
+      URI ingestBaseUri,
       String apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
@@ -107,6 +111,7 @@ public class Dashdive implements AutoCloseable {
             ImmutableDashdiveInstanceInfo.builder().classInstanceId(instanceId).build());
     this.targetEventBatchSize = new AtomicInteger(SingleEventBatcher.DEFAULT_TARGET_BATCH_SIZE);
 
+    this.ingestBaseUri = ingestBaseUri;
     this.apiKey = apiKey;
     if (!s3EventAttributeExtractor.isPresent()) {
       logger.warn(
@@ -118,6 +123,7 @@ public class Dashdive implements AutoCloseable {
         new BatchEventProcessor(
             this.instanceInfo,
             apiKey,
+            ingestBaseUri,
             presentS3EventAttributeExtractor,
             shutdownGracePeriod,
             batchProcessorHttpClient,
@@ -130,6 +136,7 @@ public class Dashdive implements AutoCloseable {
         new InitialSetupWorker(
             setupHttpClient,
             apiKey,
+            ingestBaseUri,
             skipSetupWithDefaults,
             shouldSkipImdsQueries,
             isInitialized,
@@ -144,6 +151,7 @@ public class Dashdive implements AutoCloseable {
   }
 
   Dashdive(
+      URI ingestionBaseUri,
       String apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
@@ -153,6 +161,7 @@ public class Dashdive implements AutoCloseable {
       HttpClient metricsHttpClient,
       Optional<SetupDefaults> skipSetupWithDefaultss) {
     this(
+        ingestionBaseUri,
         apiKey,
         s3EventAttributeExtractor,
         shutdownGracePeriod,
@@ -165,10 +174,12 @@ public class Dashdive implements AutoCloseable {
   }
 
   Dashdive(
+      URI ingestionBaseUri,
       String apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
-    this(Optional.of(apiKey), s3EventAttributeExtractor, shutdownGracePeriod);
+    this(Optional.of(ingestionBaseUri), Optional.of(apiKey),
+      s3EventAttributeExtractor, shutdownGracePeriod);
   }
 
   /**
@@ -183,19 +194,23 @@ public class Dashdive implements AutoCloseable {
    */
   @Builder.Constructor
   Dashdive(
+      // All fields are optional to avoid NullPointerExceptions at runtime;
+      // much better to have sends simply fail, for example, when apiKey is not specified
+      Optional<URI> ingestionBaseUri,
       Optional<String> apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
     // No need to check the user-supplied values for null, since the Immutables
     // builder automatically enforces non-null
     this(
+        ingestionBaseUri.orElse(DEFAULT_INGEST_BASE_URI),
         apiKey.orElse(""),
         s3EventAttributeExtractor,
         shutdownGracePeriod,
-        DashdiveConnection.directExecutorHttpClient(),
-        DashdiveConnection.directExecutorHttpClient(),
-        DashdiveConnection.directExecutorHttpClient(),
-        DashdiveConnection.directExecutorHttpClient(),
+        ConnectionUtils.directExecutorHttpClient(),
+        ConnectionUtils.directExecutorHttpClient(),
+        ConnectionUtils.directExecutorHttpClient(),
+        ConnectionUtils.directExecutorHttpClient(),
         Optional.empty(),
         false);
   }
@@ -257,7 +272,7 @@ public class Dashdive implements AutoCloseable {
     logger.info("Dashdive instance shutting down. Lifetime metrics: {}", metricsSinceInception);
 
     try {
-      final ObjectMapper objectMapper = DashdiveConnection.DEFAULT_SERIALIZER;
+      final ObjectMapper objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
       final TelemetryEvent.LifecycleShutdown shutdownPayload =
           ImmutableTelemetryEvent.LifecycleShutdown.builder()
               .instanceId(instanceId)
@@ -266,20 +281,21 @@ public class Dashdive implements AutoCloseable {
       final String requestBodyJson = objectMapper.writeValueAsString(shutdownPayload);
       final HttpRequest shutdownTelemetryRequest =
           HttpRequest.newBuilder()
-              .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_LIFECYCLE))
+              .uri(ConnectionUtils.getFullUri(
+                  this.ingestBaseUri, ConnectionUtils.Route.TELEMETRY_LIFECYCLE))
               .header(
-                  DashdiveConnection.Headers.KEY__CONTENT_TYPE,
-                  DashdiveConnection.Headers.VAL__CONTENT_JSON)
+                  ConnectionUtils.Headers.KEY__CONTENT_TYPE,
+                  ConnectionUtils.Headers.VAL__CONTENT_JSON)
               .header(
-                  DashdiveConnection.Headers.KEY__USER_AGENT,
-                  DashdiveConnection.Headers.getUserAgent(
+                  ConnectionUtils.Headers.KEY__USER_AGENT,
+                  ConnectionUtils.Headers.getUserAgent(
                       instanceInfo.get().javaVersion(),
                       Optional.of(VERSION),
                       Optional.of(instanceId)))
-              .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
+              .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
               .build();
-      DashdiveConnection.send(dashdiveHttpClient, shutdownTelemetryRequest);
+      ConnectionUtils.send(dashdiveHttpClient, shutdownTelemetryRequest);
     } catch (IOException | InterruptedException ignored) {
     }
   }

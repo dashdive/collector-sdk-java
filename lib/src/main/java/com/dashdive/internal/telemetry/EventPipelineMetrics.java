@@ -1,11 +1,12 @@
 package com.dashdive.internal.telemetry;
 
-import com.dashdive.internal.DashdiveConnection;
+import com.dashdive.internal.ConnectionUtils;
 import com.dashdive.internal.DashdiveInstanceInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.util.Optional;
@@ -30,10 +31,12 @@ public class EventPipelineMetrics {
   private final HttpClient httpClient;
   private final String userAgent;
   private final AtomicReference<DashdiveInstanceInfo> instanceInfo;
+  private final URI ingestBaseUri;
   private final String apiKey;
 
   public EventPipelineMetrics(
-      AtomicReference<DashdiveInstanceInfo> instanceInfo, String apiKey, HttpClient httpClient) {
+      AtomicReference<DashdiveInstanceInfo> instanceInfo, String apiKey,
+      URI ingestBaseUri, HttpClient httpClient) {
     this.metrics =
         Stream.of(Type.values()).collect(ImmutableMap.toImmutableMap(k -> k, k -> new Metric()));
     this.metricsLock = new ReentrantLock();
@@ -43,12 +46,13 @@ public class EventPipelineMetrics {
     this.periodicSender.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
     this.periodicSenderFuture = Optional.empty();
 
-    this.objectMapper = DashdiveConnection.DEFAULT_SERIALIZER;
+    this.objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
 
     this.httpClient = httpClient;
-    this.userAgent = DashdiveConnection.Headers.getUserAgentFromInstanceInfo(instanceInfo.get());
+    this.userAgent = ConnectionUtils.Headers.getUserAgentFromInstanceInfo(instanceInfo.get());
     this.instanceInfo = instanceInfo;
     this.apiKey = apiKey;
+    this.ingestBaseUri = ingestBaseUri;
   }
 
   private Void sendIncrementalMetrics() {
@@ -79,15 +83,16 @@ public class EventPipelineMetrics {
       final String requestBodyJson = objectMapper.writeValueAsString(metricsPayload);
       final HttpRequest metricsRequest =
           HttpRequest.newBuilder()
-              .uri(DashdiveConnection.getRoute(DashdiveConnection.Route.TELEMETRY_METRICS))
+              .uri(ConnectionUtils.getFullUri(
+                  this.ingestBaseUri, ConnectionUtils.Route.TELEMETRY_METRICS))
               .header(
-                  DashdiveConnection.Headers.KEY__CONTENT_TYPE,
-                  DashdiveConnection.Headers.VAL__CONTENT_JSON)
-              .header(DashdiveConnection.Headers.KEY__USER_AGENT, userAgent)
-              .header(DashdiveConnection.Headers.KEY__API_KEY, apiKey)
+                  ConnectionUtils.Headers.KEY__CONTENT_TYPE,
+                  ConnectionUtils.Headers.VAL__CONTENT_JSON)
+              .header(ConnectionUtils.Headers.KEY__USER_AGENT, userAgent)
+              .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
               .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
               .build();
-      DashdiveConnection.send(httpClient, metricsRequest);
+      ConnectionUtils.send(httpClient, metricsRequest);
     } catch (IOException exception) {
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();

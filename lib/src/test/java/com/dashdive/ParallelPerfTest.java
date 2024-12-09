@@ -186,6 +186,7 @@ public class ParallelPerfTest {
             .build();
     final Dashdive dashdive =
         new Dashdive(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(factoryWithCustomerId),
             Optional.empty(),

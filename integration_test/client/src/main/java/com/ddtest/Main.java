@@ -2,7 +2,6 @@ package com.ddtest;
 
 import com.dashdive.Dashdive;
 import com.dashdive.ImmutableS3EventAttributes;
-import com.dashdive.internal.DashdiveConnection;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -71,12 +70,11 @@ public class Main {
   */
 
   public static void main(String[] args) {
-    DashdiveConnection._setIngestBaseUri(URI.create("http://127.0.0.1:3232"));
-
     final String API_KEY = "TESTKEYZ.yiXYc+TQZaJvcNq80KA7S6+eAfCPsW4kR59ooVAu3pj/Eqjo";
     final Dashdive dashdive =
         Dashdive.builder()
             .apiKey(API_KEY)
+            .ingestBaseUri(URI.create("http://127.0.0.1:3232"))
             .s3EventAttributeExtractor(
                 (input) ->
                     ImmutableS3EventAttributes.builder().customerId("dummy-customer").build())
