@@ -62,8 +62,8 @@ public class UserExtractionTest {
             .targetEventBatchSize(BATCH_SIZE)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.empty(),
@@ -115,8 +115,8 @@ public class UserExtractionTest {
             .targetEventBatchSize(BATCH_SIZE)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(factoryReturningNull),
@@ -181,8 +181,8 @@ public class UserExtractionTest {
             .targetEventBatchSize(BATCH_SIZE)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(factoryWithFeatureId),
