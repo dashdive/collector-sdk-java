@@ -8,6 +8,8 @@ import com.dashdive.internal.telemetry.TelemetryPayload;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -22,7 +24,7 @@ public class InterceptorIdempotencyTest {
     final String awsInterceptorPrefix = "software.amazon.awssdk.";
     return interceptors.stream()
         .filter(interceptor -> !interceptor.getClass().getName().startsWith(awsInterceptorPrefix))
-        .toList();
+        .collect(Collectors.toList());
   }
 
   @Test
@@ -38,8 +40,9 @@ public class InterceptorIdempotencyTest {
             .targetEventBatchSize(100)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    Dashdive dashdive =
-        new Dashdive(
+    DashdiveImpl dashdive =
+        new DashdiveImpl(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_EMPTY),
             Optional.empty(),
@@ -52,23 +55,23 @@ public class InterceptorIdempotencyTest {
     ClientOverrideConfiguration.Builder combinedOverrideConfigurationBuilder =
         ClientOverrideConfiguration.builder().headers(Map.of("dummy-key", List.of("dummy-value")));
     combinedOverrideConfigurationBuilder =
-        dashdive.addInterceptor(combinedOverrideConfigurationBuilder);
+        dashdive.addInterceptorTo(combinedOverrideConfigurationBuilder);
     combinedOverrideConfigurationBuilder =
-        dashdive.addInterceptor(combinedOverrideConfigurationBuilder);
+        dashdive.addInterceptorTo(combinedOverrideConfigurationBuilder);
     S3ClientBuilder combinedS3ClientBuilder =
         S3Client.builder()
             .region(Region.US_WEST_1)
             .overrideConfiguration(combinedOverrideConfigurationBuilder.build());
-    combinedS3ClientBuilder = dashdive.addConfigWithInterceptor(combinedS3ClientBuilder);
-    combinedS3ClientBuilder = dashdive.addConfigWithInterceptor(combinedS3ClientBuilder);
+    combinedS3ClientBuilder = dashdive.addConfigWithInterceptorTo(combinedS3ClientBuilder);
+    combinedS3ClientBuilder = dashdive.addConfigWithInterceptorTo(combinedS3ClientBuilder);
     final S3Client combinedS3Client = combinedS3ClientBuilder.build();
 
     ClientOverrideConfiguration.Builder interceptorOverrideConfigurationBuilder =
         ClientOverrideConfiguration.builder();
     interceptorOverrideConfigurationBuilder =
-        dashdive.addInterceptor(interceptorOverrideConfigurationBuilder);
+        dashdive.addInterceptorTo(interceptorOverrideConfigurationBuilder);
     interceptorOverrideConfigurationBuilder =
-        dashdive.addInterceptor(interceptorOverrideConfigurationBuilder);
+        dashdive.addInterceptorTo(interceptorOverrideConfigurationBuilder);
     final S3Client interceptorS3Client =
         S3Client.builder()
             .region(Region.US_EAST_1)
@@ -77,9 +80,9 @@ public class InterceptorIdempotencyTest {
 
     S3ClientBuilder instrumentationS3ClientBuilder = S3Client.builder().region(Region.EU_CENTRAL_1);
     instrumentationS3ClientBuilder =
-        dashdive.addConfigWithInterceptor(instrumentationS3ClientBuilder);
+        dashdive.addConfigWithInterceptorTo(instrumentationS3ClientBuilder);
     instrumentationS3ClientBuilder =
-        dashdive.addConfigWithInterceptor(instrumentationS3ClientBuilder);
+        dashdive.addConfigWithInterceptorTo(instrumentationS3ClientBuilder);
     final S3Client instrumentationS3Client = instrumentationS3ClientBuilder.build();
 
     final List<ExecutionInterceptor> combinedList =

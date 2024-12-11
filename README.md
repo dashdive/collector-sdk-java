@@ -77,7 +77,7 @@ S3Client s3Client =
         .region(Region.US_EAST_2) // Any region will do
         // ... various other builder fields ...
         .overrideConfiguration(
-            dashdive.addInterceptor(ClientOverrideConfiguration.builder()).build())
+            dashdive.addInterceptorTo(ClientOverrideConfiguration.builder()).build())
         .build();
 ```
 

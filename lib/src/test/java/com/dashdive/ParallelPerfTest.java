@@ -26,7 +26,7 @@ class MockEventSender implements Runnable {
   private final List<Long> queueTimes = new ArrayList<>();
   private final List<Long> sleepTimes = new ArrayList<>();
 
-  public MockEventSender(Dashdive dashdive, int eventCount, int delayMs) {
+  public MockEventSender(DashdiveImpl dashdive, int eventCount, int delayMs) {
     this.interceptor = dashdive.getInterceptorForImperativeTrigger();
     this.eventCount = eventCount;
     this.delayMs = delayMs;
@@ -184,8 +184,8 @@ public class ParallelPerfTest {
             .targetEventBatchSize(BATCH_SIZE)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(factoryWithCustomerId),

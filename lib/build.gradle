@@ -10,7 +10,7 @@ plugins {
 apply from: "https://nexus.rhombus.corp/repository/maven/com/rhombus/gradle/gradle-library/1.0.36/gradle-library-1.0.36.gradle"
 
 ext {
-    dashdiveSdkVersion = "1.0.1" 
+    dashdiveSdkVersion = "1.0.2" 
     awsJavaSdkVersion = "2.17.3"
 }
 
@@ -86,7 +86,8 @@ sourceSets {
         excludeConditionally(
             it,
             { !isImplemented_ServiceClientConfig() },
-            '**/InterceptorIdempotencyTest.java'
+            '**/InterceptorIdempotencyTest.java',
+            '**/NoOpTest.java'
         )
     }
 }

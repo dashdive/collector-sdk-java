@@ -52,8 +52,8 @@ public class InternalExtractionTest {
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
 
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),

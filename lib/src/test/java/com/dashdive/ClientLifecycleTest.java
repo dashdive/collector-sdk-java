@@ -33,8 +33,8 @@ public class ClientLifecycleTest {
             .targetEventBatchSize(100)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
@@ -74,8 +74,8 @@ public class ClientLifecycleTest {
     final MockHttpClient startupMockedClient = new MockHttpClient();
     final MockHttpClient ignoredMockedClient = new MockHttpClient();
 
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             "INVALID-KEY",
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
@@ -137,8 +137,8 @@ public class ClientLifecycleTest {
             .targetEventBatchSize(100)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
@@ -231,8 +231,8 @@ public class ClientLifecycleTest {
             .targetEventBatchSize(GRACE_PERIOD_TESTS_BATCH_SIZE)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    final Dashdive dashdive =
-        new Dashdive(
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
             Dashdive.DEFAULT_INGEST_BASE_URI,
             TestUtils.API_KEY_DUMMY,
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),

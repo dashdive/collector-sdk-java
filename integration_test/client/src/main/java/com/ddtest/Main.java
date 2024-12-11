@@ -91,7 +91,7 @@ public class Main {
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
             .overrideConfiguration(
-                dashdive.addInterceptor(ClientOverrideConfiguration.builder()).build())
+                dashdive.addInterceptorTo(ClientOverrideConfiguration.builder()).build())
             .build();
 
     final S3Client s3ClientDifferentRegion =
@@ -101,7 +101,7 @@ public class Main {
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
             .overrideConfiguration(
-                dashdive.addInterceptor(ClientOverrideConfiguration.builder()).build())
+                dashdive.addInterceptorTo(ClientOverrideConfiguration.builder()).build())
             .build();
 
     final Runnable sameRegionBucketTask1 =
