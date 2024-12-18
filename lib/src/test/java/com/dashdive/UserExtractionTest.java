@@ -9,6 +9,7 @@ import com.dashdive.internal.telemetry.TelemetryPayload;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -220,5 +221,72 @@ public class UserExtractionTest {
       Assertions.assertEquals("feature-" + i, event.get("featureId"));
       Assertions.assertEquals("test-bucket-" + i, event.get("bucket"));
     }
+  }
+
+  @Test
+  void userSamplerFiltersEvents() {
+    final S3EventAttributeExtractor factoryWithFeatureId =
+        (input) -> {
+          final String featureId =
+              input
+                  .bucketName()
+                  .map(
+                      bucketName -> {
+                        final List<String> parts = List.of(bucketName.split("-"));
+                        final String numberId = parts.get(parts.size() - 1);
+                        return "feature-" + numberId;
+                      })
+                  .orElse("UNKNOWN");
+          return ImmutableS3EventAttributes.builder().featureId(featureId).build();
+        };
+
+    final MockHttpClient ignoredMockHttpClient = new MockHttpClient();
+    final MockHttpClient batchMockHttpClient = new MockHttpClient();
+
+    final int BATCH_SIZE = 2;
+    final int BATCH_COUNT = 3;
+    final int TOTAL_EVENTS = BATCH_SIZE * BATCH_COUNT;
+
+    final SetupDefaults setupDefaults =
+        ImmutableSetupDefaults.builder()
+            .dashdiveInstanceInfo(
+                ImmutableDashdiveInstanceInfo.builder().classInstanceId("user-extractor").build())
+            .targetEventBatchSize(BATCH_SIZE)
+            .startupTelemetryWarnings(TelemetryPayload.of())
+            .build();
+    
+    final AtomicInteger eventIndex = new AtomicInteger(0);
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
+            TestUtils.API_KEY_DUMMY,
+            Optional.of(factoryWithFeatureId),
+            Optional.empty(),
+            // Include every other event starting with the first one
+            Optional.of(() -> {
+                int prevEventIndex = eventIndex.getAndIncrement(); 
+                return prevEventIndex % 2 == 0;
+            }),
+            ignoredMockHttpClient.getDelegate(),
+            ignoredMockHttpClient.getDelegate(),
+            batchMockHttpClient.getDelegate(),
+            ignoredMockHttpClient.getDelegate(),
+            Optional.of(setupDefaults),
+            false);
+
+    final S3RoundTripInterceptor interceptor = dashdive.getInterceptorForImperativeTrigger();
+    for (int i = 0; i < TOTAL_EVENTS; i++) {
+      interceptor.afterExecution(
+          TestUtils.getListObjectsV2Event("test-bucket-" + i), TestUtils.EXEC_ATTRS_EMPTY);
+    }
+
+    dashdive.close();
+    dashdive.blockUntilShutdownComplete();
+
+    final List<Map<String, Object>> ingestedEvents =
+        TestUtils.getIngestedEventsFromRequestBodies(
+            batchMockHttpClient.unboxRequestBodiesAssertingNonempty());
+
+    Assertions.assertEquals(TOTAL_EVENTS / 2, ingestedEvents.size());
   }
 }

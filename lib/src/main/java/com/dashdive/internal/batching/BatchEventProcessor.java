@@ -6,6 +6,7 @@ import com.dashdive.internal.ConnectionUtils;
 import com.dashdive.internal.ConnectionUtils.BackoffSendConfig;
 import com.dashdive.internal.DashdiveInstanceInfo;
 import com.dashdive.internal.ImmutableBackoffSendConfig;
+import com.dashdive.internal.PriorityThreadFactory;
 import com.dashdive.internal.S3SingleExtractedEvent;
 import com.dashdive.internal.telemetry.EventPipelineMetrics;
 import com.dashdive.internal.telemetry.ImmutableTelemetryEvent;
@@ -46,7 +47,9 @@ class PausableThreadPoolExecutor extends ThreadPoolExecutor {
       long keepAliveTime,
       TimeUnit unit,
       BlockingQueue<Runnable> workQueue) {
-    super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
+    super(
+        corePoolSize, maximumPoolSize, keepAliveTime, unit,
+        workQueue, new PriorityThreadFactory(Thread.MIN_PRIORITY));
     isPaused = false;
   }
 

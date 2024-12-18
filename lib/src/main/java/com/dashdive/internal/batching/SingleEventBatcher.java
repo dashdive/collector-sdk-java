@@ -1,10 +1,12 @@
 package com.dashdive.internal.batching;
 
+import com.dashdive.internal.PriorityThreadFactory;
 import com.dashdive.internal.S3EventFieldName;
 import com.dashdive.internal.S3SingleExtractedEvent;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -13,6 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,29 +126,33 @@ public class SingleEventBatcher {
   private final PerKeyLocks<Long> batchRemovalLocksByThread;
 
   private final BatchEventProcessor batchEventProcessor;
+  private final Optional<Supplier<Boolean>> eventInclusionSampler;
 
   private final AtomicBoolean isShutDown;
 
   public SingleEventBatcher(
       AtomicBoolean isInitialized,
       AtomicInteger targetEventBatchSize,
-      BatchEventProcessor batchEventProcessor) {
+      BatchEventProcessor batchEventProcessor,
+      Optional<Supplier<Boolean>> eventInclusionSampler) {
     this.isInitialized = isInitialized;
     this.targetEventBatchSize = targetEventBatchSize;
 
     this.batchesByThread = new ConcurrentHashMap<>();
     this.batchMaxAgeTasksByThread = new ConcurrentHashMap<>();
     this.batchRemovalLocksByThread = new PerKeyLocks<>();
-    this.allThreadsTimer = new ScheduledThreadPoolExecutor(EXECUTOR_CORE_POOL_SIZE);
+    this.allThreadsTimer = new ScheduledThreadPoolExecutor(
+        EXECUTOR_CORE_POOL_SIZE, new PriorityThreadFactory(Thread.MIN_PRIORITY));
     this.allThreadsTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(true);
     this.allThreadsTimer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
 
     this.batchEventProcessor = batchEventProcessor;
+    this.eventInclusionSampler = eventInclusionSampler;
     this.isShutDown = new AtomicBoolean(false);
   }
 
   public static final int DEFAULT_TARGET_BATCH_SIZE = 100;
-  private static final int EVENT_MAX_AGE_MS = 2000;
+  private static final int EVENT_MAX_AGE_MS = 60000;
   // `java -jar jol-cli-latest.jar internals -classpath lib/build/classes/java/main
   // com.dashdive.ImmutableS3SingleExtractedEvent`
   // Ballpark size of S3SingleExtractedEvent object:
@@ -186,6 +194,10 @@ public class SingleEventBatcher {
       logger.warn(
           "Attempted to queue event after shutdown; will be ignored [type={}]",
           event.dataPayload().get(S3EventFieldName.ACTION_TYPE));
+      return false;
+    }
+    
+    if (eventInclusionSampler.isPresent() && !eventInclusionSampler.get().get()) {
       return false;
     }
 

@@ -80,6 +80,7 @@ public class ClientLifecycleTest {
             "INVALID-KEY",
             Optional.of(TestUtils.EXTRACTOR_CUSTOMER),
             Optional.empty(),
+            Optional.empty(),
             ignoredMockedClient.getDelegate(),
             startupMockedClient.getDelegate(),
             ignoredMockedClient.getDelegate(),

@@ -2,6 +2,7 @@ package com.dashdive.internal.telemetry;
 
 import com.dashdive.internal.ConnectionUtils;
 import com.dashdive.internal.DashdiveInstanceInfo;
+import com.dashdive.internal.PriorityThreadFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -41,7 +42,8 @@ public class EventPipelineMetrics {
         Stream.of(Type.values()).collect(ImmutableMap.toImmutableMap(k -> k, k -> new Metric()));
     this.metricsLock = new ReentrantLock();
 
-    this.periodicSender = new ScheduledThreadPoolExecutor(EXECUTOR_CORE_POOL_SIZE);
+    this.periodicSender = new ScheduledThreadPoolExecutor(
+        EXECUTOR_CORE_POOL_SIZE, new PriorityThreadFactory(Thread.MIN_PRIORITY));
     this.periodicSender.setExecuteExistingDelayedTasksAfterShutdownPolicy(true);
     this.periodicSender.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
     this.periodicSenderFuture = Optional.empty();

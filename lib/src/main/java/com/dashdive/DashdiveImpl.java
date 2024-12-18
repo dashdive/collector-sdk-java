@@ -26,6 +26,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -80,6 +82,7 @@ class DashdiveImpl implements AutoCloseable {
       String apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
+      Optional<Supplier<Boolean>> eventInclusionSampler,
       HttpClient dashdiveHttpClient,
       HttpClient setupHttpClient,
       HttpClient batchProcessorHttpClient,
@@ -113,7 +116,8 @@ class DashdiveImpl implements AutoCloseable {
         shutdownGracePeriod,
         batchProcessorHttpClient,
         metricsHttpClient);
-    this.singleEventBatcher = new SingleEventBatcher(isInitialized, targetEventBatchSize, batchEventProcessor);
+    this.singleEventBatcher = new SingleEventBatcher(
+        isInitialized, targetEventBatchSize, batchEventProcessor, eventInclusionSampler);
     this.s3RoundTripInterceptor = new S3RoundTripInterceptor(this.singleEventBatcher);
 
     this.initialSetupWorker = new InitialSetupWorker(
@@ -127,6 +131,7 @@ class DashdiveImpl implements AutoCloseable {
         targetEventBatchSize,
         Optional.of(() -> this.batchEventProcessor.notifyInitialized()));
     this.initialSetupWorkerThread = new Thread(this.initialSetupWorker);
+    this.initialSetupWorkerThread.setPriority(Thread.MIN_PRIORITY);
     this.initialSetupWorkerThread.start();
     this.isShutDown = new AtomicBoolean(false);
 
@@ -148,6 +153,7 @@ class DashdiveImpl implements AutoCloseable {
         apiKey,
         s3EventAttributeExtractor,
         shutdownGracePeriod,
+        Optional.empty(),
         dashdiveHttpClient,
         setupHttpClient,
         batchProcessorHttpClient,
@@ -162,7 +168,7 @@ class DashdiveImpl implements AutoCloseable {
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
     this(Optional.of(ingestionBaseUri), Optional.of(apiKey),
-        s3EventAttributeExtractor, shutdownGracePeriod);
+        s3EventAttributeExtractor, shutdownGracePeriod, Optional.empty());
   }
 
   DashdiveImpl(
@@ -172,7 +178,8 @@ class DashdiveImpl implements AutoCloseable {
       Optional<URI> ingestionBaseUri,
       Optional<String> apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
-      Optional<Duration> shutdownGracePeriod) {
+      Optional<Duration> shutdownGracePeriod,
+      Optional<Supplier<Boolean>> eventInclusionSampler) {
     // No need to check the user-supplied values for null, since the Immutables
     // builder automatically enforces non-null
     this(
@@ -180,6 +187,7 @@ class DashdiveImpl implements AutoCloseable {
         apiKey.orElse(""),
         s3EventAttributeExtractor,
         shutdownGracePeriod,
+        eventInclusionSampler,
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
