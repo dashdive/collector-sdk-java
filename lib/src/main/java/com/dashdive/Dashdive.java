@@ -3,6 +3,8 @@ package com.dashdive;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.function.Supplier;
+
 import org.immutables.builder.Builder;
 import org.immutables.value.Value;
 import org.slf4j.Logger;
@@ -45,17 +47,26 @@ public class Dashdive implements AutoCloseable {
       Optional<URI> ingestionBaseUri,
       Optional<String> apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
-      Optional<Duration> shutdownGracePeriod) {
-        if (!ingestionBaseUri.isPresent() || !apiKey.isPresent() || !s3EventAttributeExtractor.isPresent()) {
-          logger.warn("Dashdive instance missing one or more required fields (will no-op):\n" +
-            "{}: {}\n{}: {}\n{}: {}\n",
-            "API_KEY", apiKey.isPresent() ? "present" : "absent",
-            "INGEST_URI", ingestionBaseUri.isPresent() ? "present" : "absent",
-            "ATTRIBUTE_EXTRACTOR", s3EventAttributeExtractor.isPresent() ? "present" : "absent");
+      Optional<Duration> shutdownGracePeriod,
+      Optional<Supplier<Boolean>> eventInclusionSampler,
+      Optional<Boolean> useNoOp) {
+        boolean isRequiredFieldMissing = !ingestionBaseUri.isPresent() || !apiKey.isPresent() || !s3EventAttributeExtractor.isPresent();
+        boolean wasInstructedToNoOp = useNoOp.orElse(false);
+        if (wasInstructedToNoOp || isRequiredFieldMissing) {
+          if (wasInstructedToNoOp) {
+            logger.info("Dashdive instance will no-op due to explicit instruction");
+          } else if (isRequiredFieldMissing) {
+            logger.warn("Dashdive instance missing one or more required fields (will no-op):\n" +
+              "{}: {}\n{}: {}\n{}: {}\n",
+              "API_KEY", apiKey.isPresent() ? "present" : "absent",
+              "INGEST_URI", ingestionBaseUri.isPresent() ? "present" : "absent",
+              "ATTRIBUTE_EXTRACTOR", s3EventAttributeExtractor.isPresent() ? "present" : "absent");
+          }
           this.delegate = Optional.empty();
         } else {
           this.delegate = Optional.of(new DashdiveImpl(
-            ingestionBaseUri, apiKey, s3EventAttributeExtractor, shutdownGracePeriod));
+            ingestionBaseUri, apiKey, s3EventAttributeExtractor,
+            shutdownGracePeriod, eventInclusionSampler));
         }
       }
 

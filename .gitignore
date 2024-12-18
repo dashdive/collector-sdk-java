@@ -16,7 +16,8 @@ integration_test/client/src/main/resources/multipart.txt
 /.gradle/
 /bin/
 /build/
-/.settings/
+**/.settings/
+**/.factorypath
 .classpath
 .project
 /.vscode/
