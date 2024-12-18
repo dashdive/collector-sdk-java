@@ -131,6 +131,7 @@ class DashdiveImpl implements AutoCloseable {
         targetEventBatchSize,
         Optional.of(() -> this.batchEventProcessor.notifyInitialized()));
     this.initialSetupWorkerThread = new Thread(this.initialSetupWorker);
+    this.initialSetupWorkerThread.setPriority(Thread.MIN_PRIORITY);
     this.initialSetupWorkerThread.start();
     this.isShutDown = new AtomicBoolean(false);
 

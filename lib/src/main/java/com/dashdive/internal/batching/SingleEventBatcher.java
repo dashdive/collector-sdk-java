@@ -1,5 +1,6 @@
 package com.dashdive.internal.batching;
 
+import com.dashdive.internal.PriorityThreadFactory;
 import com.dashdive.internal.S3EventFieldName;
 import com.dashdive.internal.S3SingleExtractedEvent;
 import com.google.common.annotations.VisibleForTesting;
@@ -140,7 +141,8 @@ public class SingleEventBatcher {
     this.batchesByThread = new ConcurrentHashMap<>();
     this.batchMaxAgeTasksByThread = new ConcurrentHashMap<>();
     this.batchRemovalLocksByThread = new PerKeyLocks<>();
-    this.allThreadsTimer = new ScheduledThreadPoolExecutor(EXECUTOR_CORE_POOL_SIZE);
+    this.allThreadsTimer = new ScheduledThreadPoolExecutor(
+        EXECUTOR_CORE_POOL_SIZE, new PriorityThreadFactory(Thread.MIN_PRIORITY));
     this.allThreadsTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(true);
     this.allThreadsTimer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
 
