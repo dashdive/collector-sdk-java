@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -17,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class EventPipelineMetrics {
@@ -26,7 +28,7 @@ public class EventPipelineMetrics {
   private static final int EXECUTOR_CORE_POOL_SIZE = 1;
   private final ScheduledThreadPoolExecutor periodicSender;
   private Optional<ScheduledFuture<Void>> periodicSenderFuture;
-  private static final int MAX_INCREMENTAL_METRICS_DELAY_SEC = 5;
+  private static final long DEFAULT_MAX_INCREMENTAL_METRICS_AGE_MS = 10 * 60 * 1_000;
 
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
@@ -34,13 +36,17 @@ public class EventPipelineMetrics {
   private final AtomicReference<DashdiveInstanceInfo> instanceInfo;
   private final URI ingestBaseUri;
   private final String apiKey;
+  private final long maxIncrementalMetricsDelayMs;
+  private final Optional<Supplier<Boolean>> disableAllTelemetrySupplier;
 
   public EventPipelineMetrics(
       AtomicReference<DashdiveInstanceInfo> instanceInfo, String apiKey,
-      URI ingestBaseUri, HttpClient httpClient) {
+      URI ingestBaseUri, HttpClient httpClient, Optional<Duration> maxIncrementalMetricsDelay,
+      Optional<Supplier<Boolean>> disableAllTelemetrySupplier) {
     this.metrics =
         Stream.of(Type.values()).collect(ImmutableMap.toImmutableMap(k -> k, k -> new Metric()));
     this.metricsLock = new ReentrantLock();
+    this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
 
     this.periodicSender = new ScheduledThreadPoolExecutor(
         EXECUTOR_CORE_POOL_SIZE, new PriorityThreadFactory(Thread.MIN_PRIORITY));
@@ -55,9 +61,16 @@ public class EventPipelineMetrics {
     this.instanceInfo = instanceInfo;
     this.apiKey = apiKey;
     this.ingestBaseUri = ingestBaseUri;
+    this.maxIncrementalMetricsDelayMs = maxIncrementalMetricsDelay
+            .map(d -> d.toMillis()).orElse(DEFAULT_MAX_INCREMENTAL_METRICS_AGE_MS);
   }
 
   private Void sendIncrementalMetrics() {
+    final boolean shouldDisableTelemetry = disableAllTelemetrySupplier.map(s -> s.get()).orElse(false);
+    if (shouldDisableTelemetry) {
+      return null;
+    }
+
     metricsLock.lock();
     ImmutableMap<String, Integer> incrementalMetricsPayload;
     try {
@@ -130,8 +143,8 @@ public class EventPipelineMetrics {
             Optional.of(
                 periodicSender.schedule(
                     this::sendIncrementalMetrics,
-                    MAX_INCREMENTAL_METRICS_DELAY_SEC,
-                    TimeUnit.SECONDS));
+                    maxIncrementalMetricsDelayMs,
+                    TimeUnit.MILLISECONDS));
       }
     } finally {
       metricsLock.unlock();

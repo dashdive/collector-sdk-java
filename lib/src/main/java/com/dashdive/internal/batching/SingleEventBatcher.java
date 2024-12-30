@@ -4,6 +4,8 @@ import com.dashdive.internal.PriorityThreadFactory;
 import com.dashdive.internal.S3EventFieldName;
 import com.dashdive.internal.S3SingleExtractedEvent;
 import com.google.common.annotations.VisibleForTesting;
+
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -134,9 +136,11 @@ public class SingleEventBatcher {
       AtomicBoolean isInitialized,
       AtomicInteger targetEventBatchSize,
       BatchEventProcessor batchEventProcessor,
-      Optional<Supplier<Boolean>> eventInclusionSampler) {
+      Optional<Supplier<Boolean>> eventInclusionSampler,
+      Optional<Duration> maxEventDelay) {
     this.isInitialized = isInitialized;
     this.targetEventBatchSize = targetEventBatchSize;
+    this.eventMaxAgeMs = maxEventDelay.map(d -> d.toMillis()).orElse(DEFAULT_EVENT_MAX_AGE_MS);
 
     this.batchesByThread = new ConcurrentHashMap<>();
     this.batchMaxAgeTasksByThread = new ConcurrentHashMap<>();
@@ -151,8 +155,9 @@ public class SingleEventBatcher {
     this.isShutDown = new AtomicBoolean(false);
   }
 
-  public static final int DEFAULT_TARGET_BATCH_SIZE = 100;
-  private static final int EVENT_MAX_AGE_MS = 60000;
+  public static final int DEFAULT_TARGET_BATCH_SIZE = 200;
+  private static final long DEFAULT_EVENT_MAX_AGE_MS = 10 * 60 * 1_000;
+  private final long eventMaxAgeMs;
   // `java -jar jol-cli-latest.jar internals -classpath lib/build/classes/java/main
   // com.dashdive.ImmutableS3SingleExtractedEvent`
   // Ballpark size of S3SingleExtractedEvent object:
@@ -257,7 +262,7 @@ public class SingleEventBatcher {
                   }
                   return null;
                 },
-                EVENT_MAX_AGE_MS,
+                eventMaxAgeMs,
                 TimeUnit.MILLISECONDS);
         batchMaxAgeTasksByThread.put(threadId, nextScheduledBatchRemoval);
       }

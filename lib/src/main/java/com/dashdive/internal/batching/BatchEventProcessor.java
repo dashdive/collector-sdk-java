@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +103,7 @@ public class BatchEventProcessor {
 
   private final S3EventAttributeExtractor s3EventAttributeExtractor;
   private final Optional<Duration> shutdownGracePeriod;
+  private final Optional<Supplier<Boolean>> disableAllTelemetrySupplier;
 
   private static final int EXECUTOR_CORE_POOL_SIZE = 0;
   private static final int EXECUTOR_MAX_POOL_SIZE = 10;
@@ -118,13 +121,18 @@ public class BatchEventProcessor {
       URI ingestBaseUri,
       S3EventAttributeExtractor s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
+      Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
+      Optional<Duration> maxMetricsDelay,
       // TODO: It may be the case that Java 11's HttpClient is not thread safe,
       // or the SSL context is not thread safe (see: https://stackoverflow.com/a/53767728),
       // or at a minimum we may be doing extra work since HttpClientImpls seem to have their
       // own manager threads.
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient) {
-    this.metrics = new EventPipelineMetrics(instanceInfo, apiKey, ingestBaseUri, metricsHttpClient);
+    this.metrics = new EventPipelineMetrics(
+            instanceInfo, apiKey, ingestBaseUri,
+            metricsHttpClient, maxMetricsDelay, disableAllTelemetrySupplier);
+    this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
     this.httpClient = batchProcessorHttpClient;
     this.userAgent = "";
     this.objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
@@ -306,7 +314,7 @@ public class BatchEventProcessor {
                     event.telemetryErrors().getItems().size() > 0
                         || event.telemetryWarnings().getItems().size() > 0)
             .collect(ImmutableList.toImmutableList());
-    if (eventsWithTelemetry.size() > 0) {
+    if (eventsWithTelemetry.size() > 0 && !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false)) {
       try {
         final TelemetryEvent.ExtractionIssues extractionIssuesPayload =
             ImmutableTelemetryEvent.ExtractionIssues.builder()

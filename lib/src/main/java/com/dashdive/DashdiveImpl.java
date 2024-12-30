@@ -67,6 +67,7 @@ class DashdiveImpl implements AutoCloseable {
   private final AtomicReference<DashdiveInstanceInfo> instanceInfo;
   private final AtomicInteger targetEventBatchSize;
 
+  private final Optional<Supplier<Boolean>> disableAllTelemetrySupplier;
   private final HttpClient dashdiveHttpClient;
 
   // TODO: Maybe send list of execution interceptors to our telemetry endpoint.
@@ -83,6 +84,9 @@ class DashdiveImpl implements AutoCloseable {
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
       Optional<Supplier<Boolean>> eventInclusionSampler,
+      Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
+      Optional<Duration> maxEventDelay,
+      Optional<Duration> maxMetricsDelay,
       HttpClient dashdiveHttpClient,
       HttpClient setupHttpClient,
       HttpClient batchProcessorHttpClient,
@@ -108,16 +112,20 @@ class DashdiveImpl implements AutoCloseable {
     }
     final S3EventAttributeExtractor presentS3EventAttributeExtractor = s3EventAttributeExtractor
         .orElse(new NoOpS3EventAttributeExtractor());
+    this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
     this.batchEventProcessor = new BatchEventProcessor(
         this.instanceInfo,
         apiKey,
         ingestBaseUri,
         presentS3EventAttributeExtractor,
         shutdownGracePeriod,
+        disableAllTelemetrySupplier,
+        maxMetricsDelay,
         batchProcessorHttpClient,
         metricsHttpClient);
     this.singleEventBatcher = new SingleEventBatcher(
-        isInitialized, targetEventBatchSize, batchEventProcessor, eventInclusionSampler);
+        isInitialized, targetEventBatchSize, batchEventProcessor,
+        eventInclusionSampler, maxEventDelay);
     this.s3RoundTripInterceptor = new S3RoundTripInterceptor(this.singleEventBatcher);
 
     this.initialSetupWorker = new InitialSetupWorker(
@@ -129,7 +137,8 @@ class DashdiveImpl implements AutoCloseable {
         isInitialized,
         instanceInfo,
         targetEventBatchSize,
-        Optional.of(() -> this.batchEventProcessor.notifyInitialized()));
+        Optional.of(() -> this.batchEventProcessor.notifyInitialized()),
+        !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false));
     this.initialSetupWorkerThread = new Thread(this.initialSetupWorker);
     this.initialSetupWorkerThread.setPriority(Thread.MIN_PRIORITY);
     this.initialSetupWorkerThread.start();
@@ -138,6 +147,7 @@ class DashdiveImpl implements AutoCloseable {
     logger.info("Dashdive instance created with id: {}", instanceId);
   }
 
+  @VisibleForTesting
   DashdiveImpl(
       URI ingestionBaseUri,
       String apiKey,
@@ -147,28 +157,63 @@ class DashdiveImpl implements AutoCloseable {
       HttpClient setupHttpClient,
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient,
-      Optional<SetupDefaults> skipSetupWithDefaultss) {
+      Optional<SetupDefaults> skipSetupWithDefaults) {
     this(
         ingestionBaseUri,
         apiKey,
         s3EventAttributeExtractor,
         shutdownGracePeriod,
         Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
         dashdiveHttpClient,
         setupHttpClient,
         batchProcessorHttpClient,
         metricsHttpClient,
-        skipSetupWithDefaultss,
+        skipSetupWithDefaults,
         false);
   }
 
+  @VisibleForTesting
+  DashdiveImpl(
+      URI ingestBaseUri,
+      String apiKey,
+      Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
+      Optional<Duration> shutdownGracePeriod,
+      Optional<Supplier<Boolean>> eventInclusionSampler,
+      HttpClient dashdiveHttpClient,
+      HttpClient setupHttpClient,
+      HttpClient batchProcessorHttpClient,
+      HttpClient metricsHttpClient,
+      Optional<SetupDefaults> skipSetupWithDefaults,
+      boolean shouldSkipImdsQueries) {
+      this(
+          ingestBaseUri,
+          apiKey,
+          s3EventAttributeExtractor,
+          shutdownGracePeriod,
+          eventInclusionSampler,
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          dashdiveHttpClient,
+          setupHttpClient,
+          batchProcessorHttpClient,
+          metricsHttpClient,
+          skipSetupWithDefaults,
+          shouldSkipImdsQueries);
+    }
+
+  @VisibleForTesting
   DashdiveImpl(
       URI ingestionBaseUri,
       String apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
     this(Optional.of(ingestionBaseUri), Optional.of(apiKey),
-        s3EventAttributeExtractor, shutdownGracePeriod, Optional.empty());
+        s3EventAttributeExtractor, shutdownGracePeriod, Optional.empty(),
+        Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   DashdiveImpl(
@@ -179,7 +224,10 @@ class DashdiveImpl implements AutoCloseable {
       Optional<String> apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
-      Optional<Supplier<Boolean>> eventInclusionSampler) {
+      Optional<Supplier<Boolean>> eventInclusionSampler,
+      Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
+      Optional<Duration> maxEventDelay,
+      Optional<Duration> maxMetricsDelay) {
     // No need to check the user-supplied values for null, since the Immutables
     // builder automatically enforces non-null
     this(
@@ -188,6 +236,9 @@ class DashdiveImpl implements AutoCloseable {
         s3EventAttributeExtractor,
         shutdownGracePeriod,
         eventInclusionSampler,
+        disableAllTelemetrySupplier,
+        maxEventDelay,
+        maxMetricsDelay,
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
@@ -232,6 +283,10 @@ class DashdiveImpl implements AutoCloseable {
         .getSerializableMetricsSinceInception();
     logger.info("Dashdive instance shutting down. Lifetime metrics: {}", metricsSinceInception);
 
+    final boolean shouldDisableTelemetry = disableAllTelemetrySupplier.map(s -> s.get()).orElse(false);
+    if (shouldDisableTelemetry) {
+      return;
+    }
     try {
       final ObjectMapper objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
       final TelemetryEvent.LifecycleShutdown shutdownPayload = ImmutableTelemetryEvent.LifecycleShutdown.builder()
