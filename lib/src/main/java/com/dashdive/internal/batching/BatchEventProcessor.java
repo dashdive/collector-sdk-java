@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +92,7 @@ class PausableThreadPoolExecutor extends ThreadPoolExecutor {
 public class BatchEventProcessor {
   private static final Logger logger = LoggerFactory.getLogger(BatchEventProcessor.class);
 
-  private final Optional<EventPipelineMetrics> metrics;
+  private final EventPipelineMetrics metrics;
   private final HttpClient httpClient;
   private String userAgent;
   private final String apiKey;
@@ -101,6 +103,7 @@ public class BatchEventProcessor {
 
   private final S3EventAttributeExtractor s3EventAttributeExtractor;
   private final Optional<Duration> shutdownGracePeriod;
+  private final Optional<Supplier<Boolean>> disableAllTelemetrySupplier;
 
   private static final int EXECUTOR_CORE_POOL_SIZE = 0;
   private static final int EXECUTOR_MAX_POOL_SIZE = 10;
@@ -118,7 +121,7 @@ public class BatchEventProcessor {
       URI ingestBaseUri,
       S3EventAttributeExtractor s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
-      Optional<Boolean> disableAllTelemetry,
+      Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
       Optional<Duration> maxMetricsDelay,
       // TODO: It may be the case that Java 11's HttpClient is not thread safe,
       // or the SSL context is not thread safe (see: https://stackoverflow.com/a/53767728),
@@ -126,10 +129,10 @@ public class BatchEventProcessor {
       // own manager threads.
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient) {
-    this.metrics = disableAllTelemetry.orElse(false) ?
-        Optional.empty() :
-        Optional.of(new EventPipelineMetrics(
-            instanceInfo, apiKey, ingestBaseUri, metricsHttpClient, maxMetricsDelay));
+    this.metrics = new EventPipelineMetrics(
+            instanceInfo, apiKey, ingestBaseUri,
+            metricsHttpClient, maxMetricsDelay, disableAllTelemetrySupplier);
+    this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
     this.httpClient = batchProcessorHttpClient;
     this.userAgent = "";
     this.objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
@@ -185,30 +188,30 @@ public class BatchEventProcessor {
     // So it's no significant perf hit for us to atomically operate on the metrics object here.
     final int batchSize = batch.size();
     if (didEnqueue) {
-      metrics.ifPresent(m -> m.addAll(
+      metrics.addAll(
           ImmutableMap.of(
               EventPipelineMetrics.Type.EVENTS_ENQUEUED,
               batchSize,
               EventPipelineMetrics.Type.BATCHES_ENQUEUED,
-              batchSize > 0 ? 1 : 0)));
+              batchSize > 0 ? 1 : 0));
     } else {
       logger.warn("Dropped batch of {} events due to full queue", batchSize);
-      metrics.ifPresent(m -> m.addAll(
+      metrics.addAll(
           ImmutableMap.of(
               EventPipelineMetrics.Type.EVENTS_DROPPED_FROM_QUEUE,
               batchSize,
               EventPipelineMetrics.Type.BATCHES_DROPPED_FROM_QUEUE,
-              batchSize > 0 ? 1 : 0)));
+              batchSize > 0 ? 1 : 0));
     }
   }
 
   public ImmutableMap<String, Integer> getSerializableMetricsSinceInception() {
-    return metrics.map(m -> m.getSerializableMetricsSinceInception()).orElse(ImmutableMap.of());
+    return metrics.getSerializableMetricsSinceInception();
   }
 
   public void shutDownAndFlush() {
     shutDownAndFlushExecutor();
-    metrics.ifPresent(m -> m.shutDownAndFlush());
+    metrics.shutDownAndFlush();
   }
 
   private void shutDownAndFlushExecutor() {
@@ -304,11 +307,6 @@ public class BatchEventProcessor {
       }
     }
 
-    if (metrics.isEmpty()) {
-      return;
-    }
-    final EventPipelineMetrics metricsUnwrapped = metrics.get();
-
     ImmutableList<S3SingleExtractedEvent> eventsWithTelemetry =
         finalizedBatch.stream()
             .filter(
@@ -316,7 +314,7 @@ public class BatchEventProcessor {
                     event.telemetryErrors().getItems().size() > 0
                         || event.telemetryWarnings().getItems().size() > 0)
             .collect(ImmutableList.toImmutableList());
-    if (eventsWithTelemetry.size() > 0) {
+    if (eventsWithTelemetry.size() > 0 && !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false)) {
       try {
         final TelemetryEvent.ExtractionIssues extractionIssuesPayload =
             ImmutableTelemetryEvent.ExtractionIssues.builder()
@@ -367,7 +365,7 @@ public class BatchEventProcessor {
             ? EventPipelineMetrics.Type.BATCHES_SENT
             : EventPipelineMetrics.Type.BATCHES_DROPPED_SEND_FAILURE;
 
-    metricsUnwrapped.addAll(
+    metrics.addAll(
         ImmutableMap.of(
             eventNetworkType,
             validEvents.size(),
@@ -386,8 +384,6 @@ public class BatchEventProcessor {
   @VisibleForTesting
   public void _blockUntilShutdownComplete() throws InterruptedException {
     executor.awaitTermination(1, TimeUnit.DAYS);
-    if (metrics.isPresent()) {
-      metrics.get()._blockUntilShutdownComplete();
-    }
+    metrics._blockUntilShutdownComplete();
   }
 }

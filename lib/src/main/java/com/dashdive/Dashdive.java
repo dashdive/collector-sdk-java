@@ -41,7 +41,7 @@ public class Dashdive implements AutoCloseable {
    *     remaining events and send
    * @param eventInclusionSampler a supplier that should return true to include the event, false otherwise
    * @param useNoOp if present and true, don't start any executors related to Dashdive (do absolutely nothing)
-   * @param disableAllTelemetry if present and true, don't send any telemetry
+   * @param disableAllTelemetrySupplier if present and calling evalutes to true, don't send any telemetry
    * @param maxEventDelay specify a max age before a batch is flushed (default 600 seconds)
    * @param maxMetricsDelay specify a max age before incremental metrics are flushed (default 600 seconds)
    */
@@ -55,7 +55,7 @@ public class Dashdive implements AutoCloseable {
       Optional<Duration> shutdownGracePeriod,
       Optional<Supplier<Boolean>> eventInclusionSampler,
       Optional<Boolean> useNoOp,
-      Optional<Boolean> disableAllTelemetry,
+      Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
       Optional<Duration> maxEventDelay,
       Optional<Duration> maxMetricsDelay) {
         boolean isRequiredFieldMissing = !ingestionBaseUri.isPresent() || !apiKey.isPresent() || !s3EventAttributeExtractor.isPresent();
@@ -75,7 +75,7 @@ public class Dashdive implements AutoCloseable {
           this.delegate = Optional.of(new DashdiveImpl(
             ingestionBaseUri, apiKey, s3EventAttributeExtractor,
             shutdownGracePeriod, eventInclusionSampler,
-            disableAllTelemetry, maxEventDelay, maxMetricsDelay));
+            disableAllTelemetrySupplier, maxEventDelay, maxMetricsDelay));
         }
       }
 

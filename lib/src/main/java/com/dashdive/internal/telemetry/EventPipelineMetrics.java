@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class EventPipelineMetrics {
@@ -36,13 +37,16 @@ public class EventPipelineMetrics {
   private final URI ingestBaseUri;
   private final String apiKey;
   private final long maxIncrementalMetricsDelayMs;
+  private final Optional<Supplier<Boolean>> disableAllTelemetrySupplier;
 
   public EventPipelineMetrics(
       AtomicReference<DashdiveInstanceInfo> instanceInfo, String apiKey,
-      URI ingestBaseUri, HttpClient httpClient, Optional<Duration> maxIncrementalMetricsDelay) {
+      URI ingestBaseUri, HttpClient httpClient, Optional<Duration> maxIncrementalMetricsDelay,
+      Optional<Supplier<Boolean>> disableAllTelemetrySupplier) {
     this.metrics =
         Stream.of(Type.values()).collect(ImmutableMap.toImmutableMap(k -> k, k -> new Metric()));
     this.metricsLock = new ReentrantLock();
+    this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
 
     this.periodicSender = new ScheduledThreadPoolExecutor(
         EXECUTOR_CORE_POOL_SIZE, new PriorityThreadFactory(Thread.MIN_PRIORITY));
@@ -62,6 +66,11 @@ public class EventPipelineMetrics {
   }
 
   private Void sendIncrementalMetrics() {
+    final boolean shouldDisableTelemetry = disableAllTelemetrySupplier.map(s -> s.get()).orElse(false);
+    if (shouldDisableTelemetry) {
+      return null;
+    }
+
     metricsLock.lock();
     ImmutableMap<String, Integer> incrementalMetricsPayload;
     try {

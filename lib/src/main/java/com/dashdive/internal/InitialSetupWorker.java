@@ -53,6 +53,7 @@ public class InitialSetupWorker implements Runnable {
   private final AtomicReference<DashdiveInstanceInfo> instanceInfo;
   private final AtomicInteger targetEventBatchSize;
 
+  private final boolean sendTelemetry;
   private boolean hasRunPostSetupAction = false;
   private final Optional<Runnable> postSetupAction;
 
@@ -65,7 +66,8 @@ public class InitialSetupWorker implements Runnable {
       AtomicBoolean isInitialized,
       AtomicReference<DashdiveInstanceInfo> instanceInfo,
       AtomicInteger targetEventBatchSize,
-      Optional<Runnable> postSetupAction) {
+      Optional<Runnable> postSetupAction,
+      boolean sendTelemetry) {
     this.httpClient = httpClient;
     this.apiKey = apiKey;
     this.ingestBaseUri = ingestBaseUri;
@@ -78,6 +80,7 @@ public class InitialSetupWorker implements Runnable {
     this.targetEventBatchSize = targetEventBatchSize;
 
     this.postSetupAction = postSetupAction;
+    this.sendTelemetry = sendTelemetry;
   }
 
   private void runPostSetupActionIdempotently() {
@@ -157,7 +160,7 @@ public class InitialSetupWorker implements Runnable {
 
   private void checkIngestConnectionWithReporting() {
     final TelemetryPayload checkIngestErrors = checkIngestConnectionWithLogging();
-    if (!checkIngestErrors.isEmpty()) {
+    if (!checkIngestErrors.isEmpty() && sendTelemetry) {
       try {
         final TelemetryEvent.InvalidApiKey invalidApiKeyPayload =
             ImmutableTelemetryEvent.InvalidApiKey.builder()
@@ -417,6 +420,9 @@ public class InitialSetupWorker implements Runnable {
     }
     this.runPostSetupActionIdempotently();
 
+    if (!sendTelemetry) {
+      return;
+    }
     try {
       final ObjectMapper objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
       final TelemetryEvent.LifecycleStartup startupPayload =
