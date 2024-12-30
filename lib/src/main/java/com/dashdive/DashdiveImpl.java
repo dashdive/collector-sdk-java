@@ -83,6 +83,9 @@ class DashdiveImpl implements AutoCloseable {
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
       Optional<Supplier<Boolean>> eventInclusionSampler,
+      Optional<Boolean> disableAllTelemetry,
+      Optional<Duration> maxEventDelay,
+      Optional<Duration> maxMetricsDelay,
       HttpClient dashdiveHttpClient,
       HttpClient setupHttpClient,
       HttpClient batchProcessorHttpClient,
@@ -114,10 +117,13 @@ class DashdiveImpl implements AutoCloseable {
         ingestBaseUri,
         presentS3EventAttributeExtractor,
         shutdownGracePeriod,
+        disableAllTelemetry,
+        maxMetricsDelay,
         batchProcessorHttpClient,
         metricsHttpClient);
     this.singleEventBatcher = new SingleEventBatcher(
-        isInitialized, targetEventBatchSize, batchEventProcessor, eventInclusionSampler);
+        isInitialized, targetEventBatchSize, batchEventProcessor,
+        eventInclusionSampler, maxEventDelay);
     this.s3RoundTripInterceptor = new S3RoundTripInterceptor(this.singleEventBatcher);
 
     this.initialSetupWorker = new InitialSetupWorker(
@@ -138,6 +144,7 @@ class DashdiveImpl implements AutoCloseable {
     logger.info("Dashdive instance created with id: {}", instanceId);
   }
 
+  @VisibleForTesting
   DashdiveImpl(
       URI ingestionBaseUri,
       String apiKey,
@@ -147,28 +154,63 @@ class DashdiveImpl implements AutoCloseable {
       HttpClient setupHttpClient,
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient,
-      Optional<SetupDefaults> skipSetupWithDefaultss) {
+      Optional<SetupDefaults> skipSetupWithDefaults) {
     this(
         ingestionBaseUri,
         apiKey,
         s3EventAttributeExtractor,
         shutdownGracePeriod,
         Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
         dashdiveHttpClient,
         setupHttpClient,
         batchProcessorHttpClient,
         metricsHttpClient,
-        skipSetupWithDefaultss,
+        skipSetupWithDefaults,
         false);
   }
 
+  @VisibleForTesting
+  DashdiveImpl(
+      URI ingestBaseUri,
+      String apiKey,
+      Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
+      Optional<Duration> shutdownGracePeriod,
+      Optional<Supplier<Boolean>> eventInclusionSampler,
+      HttpClient dashdiveHttpClient,
+      HttpClient setupHttpClient,
+      HttpClient batchProcessorHttpClient,
+      HttpClient metricsHttpClient,
+      Optional<SetupDefaults> skipSetupWithDefaults,
+      boolean shouldSkipImdsQueries) {
+      this(
+          ingestBaseUri,
+          apiKey,
+          s3EventAttributeExtractor,
+          shutdownGracePeriod,
+          eventInclusionSampler,
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          dashdiveHttpClient,
+          setupHttpClient,
+          batchProcessorHttpClient,
+          metricsHttpClient,
+          skipSetupWithDefaults,
+          shouldSkipImdsQueries);
+    }
+
+  @VisibleForTesting
   DashdiveImpl(
       URI ingestionBaseUri,
       String apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
     this(Optional.of(ingestionBaseUri), Optional.of(apiKey),
-        s3EventAttributeExtractor, shutdownGracePeriod, Optional.empty());
+        s3EventAttributeExtractor, shutdownGracePeriod, Optional.empty(),
+        Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   DashdiveImpl(
@@ -179,7 +221,10 @@ class DashdiveImpl implements AutoCloseable {
       Optional<String> apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
-      Optional<Supplier<Boolean>> eventInclusionSampler) {
+      Optional<Supplier<Boolean>> eventInclusionSampler,
+      Optional<Boolean> disableAllTelemetry,
+      Optional<Duration> maxEventDelay,
+      Optional<Duration> maxMetricsDelay) {
     // No need to check the user-supplied values for null, since the Immutables
     // builder automatically enforces non-null
     this(
@@ -188,6 +233,9 @@ class DashdiveImpl implements AutoCloseable {
         s3EventAttributeExtractor,
         shutdownGracePeriod,
         eventInclusionSampler,
+        disableAllTelemetry,
+        maxEventDelay,
+        maxMetricsDelay,
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),

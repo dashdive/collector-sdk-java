@@ -90,7 +90,7 @@ class PausableThreadPoolExecutor extends ThreadPoolExecutor {
 public class BatchEventProcessor {
   private static final Logger logger = LoggerFactory.getLogger(BatchEventProcessor.class);
 
-  private final EventPipelineMetrics metrics;
+  private final Optional<EventPipelineMetrics> metrics;
   private final HttpClient httpClient;
   private String userAgent;
   private final String apiKey;
@@ -118,13 +118,18 @@ public class BatchEventProcessor {
       URI ingestBaseUri,
       S3EventAttributeExtractor s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
+      Optional<Boolean> disableAllTelemetry,
+      Optional<Duration> maxMetricsDelay,
       // TODO: It may be the case that Java 11's HttpClient is not thread safe,
       // or the SSL context is not thread safe (see: https://stackoverflow.com/a/53767728),
       // or at a minimum we may be doing extra work since HttpClientImpls seem to have their
       // own manager threads.
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient) {
-    this.metrics = new EventPipelineMetrics(instanceInfo, apiKey, ingestBaseUri, metricsHttpClient);
+    this.metrics = disableAllTelemetry.orElse(false) ?
+        Optional.empty() :
+        Optional.of(new EventPipelineMetrics(
+            instanceInfo, apiKey, ingestBaseUri, metricsHttpClient, maxMetricsDelay));
     this.httpClient = batchProcessorHttpClient;
     this.userAgent = "";
     this.objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
@@ -180,30 +185,30 @@ public class BatchEventProcessor {
     // So it's no significant perf hit for us to atomically operate on the metrics object here.
     final int batchSize = batch.size();
     if (didEnqueue) {
-      metrics.addAll(
+      metrics.ifPresent(m -> m.addAll(
           ImmutableMap.of(
               EventPipelineMetrics.Type.EVENTS_ENQUEUED,
               batchSize,
               EventPipelineMetrics.Type.BATCHES_ENQUEUED,
-              batchSize > 0 ? 1 : 0));
+              batchSize > 0 ? 1 : 0)));
     } else {
       logger.warn("Dropped batch of {} events due to full queue", batchSize);
-      metrics.addAll(
+      metrics.ifPresent(m -> m.addAll(
           ImmutableMap.of(
               EventPipelineMetrics.Type.EVENTS_DROPPED_FROM_QUEUE,
               batchSize,
               EventPipelineMetrics.Type.BATCHES_DROPPED_FROM_QUEUE,
-              batchSize > 0 ? 1 : 0));
+              batchSize > 0 ? 1 : 0)));
     }
   }
 
   public ImmutableMap<String, Integer> getSerializableMetricsSinceInception() {
-    return metrics.getSerializableMetricsSinceInception();
+    return metrics.map(m -> m.getSerializableMetricsSinceInception()).orElse(ImmutableMap.of());
   }
 
   public void shutDownAndFlush() {
     shutDownAndFlushExecutor();
-    metrics.shutDownAndFlush();
+    metrics.ifPresent(m -> m.shutDownAndFlush());
   }
 
   private void shutDownAndFlushExecutor() {
@@ -299,6 +304,11 @@ public class BatchEventProcessor {
       }
     }
 
+    if (metrics.isEmpty()) {
+      return;
+    }
+    final EventPipelineMetrics metricsUnwrapped = metrics.get();
+
     ImmutableList<S3SingleExtractedEvent> eventsWithTelemetry =
         finalizedBatch.stream()
             .filter(
@@ -357,7 +367,7 @@ public class BatchEventProcessor {
             ? EventPipelineMetrics.Type.BATCHES_SENT
             : EventPipelineMetrics.Type.BATCHES_DROPPED_SEND_FAILURE;
 
-    metrics.addAll(
+    metricsUnwrapped.addAll(
         ImmutableMap.of(
             eventNetworkType,
             validEvents.size(),
@@ -376,6 +386,8 @@ public class BatchEventProcessor {
   @VisibleForTesting
   public void _blockUntilShutdownComplete() throws InterruptedException {
     executor.awaitTermination(1, TimeUnit.DAYS);
-    metrics._blockUntilShutdownComplete();
+    if (metrics.isPresent()) {
+      metrics.get()._blockUntilShutdownComplete();
+    }
   }
 }

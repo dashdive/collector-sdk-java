@@ -169,22 +169,6 @@ public class S3SingleEventProcessor {
                       userAttrExtractionInput))
               .build());
     }
-    if (actionType != S3ActionType.PUT_OBJECT
-        && userExtractedAttributes.objectCategory().isPresent()
-        && !userExtractedAttributes.objectCategory().get().isEmpty()) {
-      userAttrWarnings.add(
-          ImmutableTelemetryItem.builder()
-              .type("UNEXPECTED_OBJECT_CATEGORY")
-              .data(
-                  ImmutableMap.of(
-                      "message",
-                      "`objectCategory` found on action type that is not PUT or POST",
-                      "inputArguments",
-                      userAttrExtractionInput,
-                      "objectCategory",
-                      userExtractedAttributes.objectCategory().get()))
-              .build());
-    }
 
     return ImmutableS3SingleExtractedEvent.builder()
         .from(postProcessed)

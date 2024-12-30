@@ -39,6 +39,11 @@ public class Dashdive implements AutoCloseable {
    *     from S3 events
    * @param shutdownGracePeriod the duration to wait for the Dashdive instance to flush any
    *     remaining events and send
+   * @param eventInclusionSampler a supplier that should return true to include the event, false otherwise
+   * @param useNoOp if present and true, don't start any executors related to Dashdive (do absolutely nothing)
+   * @param disableAllTelemetry if present and true, don't send any telemetry
+   * @param maxEventDelay specify a max age before a batch is flushed (default 600 seconds)
+   * @param maxMetricsDelay specify a max age before incremental metrics are flushed (default 600 seconds)
    */
    @Builder.Constructor
    public Dashdive(
@@ -49,7 +54,10 @@ public class Dashdive implements AutoCloseable {
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod,
       Optional<Supplier<Boolean>> eventInclusionSampler,
-      Optional<Boolean> useNoOp) {
+      Optional<Boolean> useNoOp,
+      Optional<Boolean> disableAllTelemetry,
+      Optional<Duration> maxEventDelay,
+      Optional<Duration> maxMetricsDelay) {
         boolean isRequiredFieldMissing = !ingestionBaseUri.isPresent() || !apiKey.isPresent() || !s3EventAttributeExtractor.isPresent();
         boolean wasInstructedToNoOp = useNoOp.orElse(false);
         if (wasInstructedToNoOp || isRequiredFieldMissing) {
@@ -66,7 +74,8 @@ public class Dashdive implements AutoCloseable {
         } else {
           this.delegate = Optional.of(new DashdiveImpl(
             ingestionBaseUri, apiKey, s3EventAttributeExtractor,
-            shutdownGracePeriod, eventInclusionSampler));
+            shutdownGracePeriod, eventInclusionSampler,
+            disableAllTelemetry, maxEventDelay, maxMetricsDelay));
         }
       }
 
