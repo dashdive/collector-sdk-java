@@ -4,14 +4,12 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Supplier;
-
 import org.immutables.builder.Builder;
 import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
-
 
 /**
  * An instance of the Dashdive collector, which is used to instrument one or multiple AWS {@link
@@ -23,7 +21,8 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 @Value.Style(newBuilder = "builder")
 public class Dashdive implements AutoCloseable {
   /** The version of the Dashdive SDK. */
-  public static final String VERSION = "1.0.4";
+  public static final String VERSION = "1.0.5";
+
   public static final URI DEFAULT_INGEST_BASE_URI = URI.create("https://ingest.dashdive.com");
 
   private static final Logger logger = LoggerFactory.getLogger(Dashdive.class);
@@ -39,14 +38,18 @@ public class Dashdive implements AutoCloseable {
    *     from S3 events
    * @param shutdownGracePeriod the duration to wait for the Dashdive instance to flush any
    *     remaining events and send
-   * @param eventInclusionSampler a supplier that should return true to include the event, false otherwise
-   * @param useNoOp if present and true, don't start any executors related to Dashdive (do absolutely nothing)
-   * @param disableAllTelemetrySupplier if present and calling evalutes to true, don't send any telemetry
+   * @param eventInclusionSampler a supplier that should return true to include the event, false
+   *     otherwise
+   * @param useNoOp if present and true, don't start any executors related to Dashdive (do
+   *     absolutely nothing)
+   * @param disableAllTelemetrySupplier if present and calling evalutes to true, don't send any
+   *     telemetry
    * @param maxEventDelay specify a max age before a batch is flushed (default 600 seconds)
-   * @param maxMetricsDelay specify a max age before incremental metrics are flushed (default 600 seconds)
+   * @param maxMetricsDelay specify a max age before incremental metrics are flushed (default 600
+   *     seconds)
    */
-   @Builder.Constructor
-   public Dashdive(
+  @Builder.Constructor
+  public Dashdive(
       // All fields are optional to avoid NullPointerExceptions at runtime;
       // much better to have sends simply fail, for example, when apiKey is not specified
       Optional<URI> ingestionBaseUri,
@@ -58,26 +61,40 @@ public class Dashdive implements AutoCloseable {
       Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
       Optional<Duration> maxEventDelay,
       Optional<Duration> maxMetricsDelay) {
-        boolean isRequiredFieldMissing = !ingestionBaseUri.isPresent() || !apiKey.isPresent() || !s3EventAttributeExtractor.isPresent();
-        boolean wasInstructedToNoOp = useNoOp.orElse(false);
-        if (wasInstructedToNoOp || isRequiredFieldMissing) {
-          if (wasInstructedToNoOp) {
-            logger.info("Dashdive instance will no-op due to explicit instruction");
-          } else if (isRequiredFieldMissing) {
-            logger.warn("Dashdive instance missing one or more required fields (will no-op):\n" +
-              "{}: {}\n{}: {}\n{}: {}\n",
-              "API_KEY", apiKey.isPresent() ? "present" : "absent",
-              "INGEST_URI", ingestionBaseUri.isPresent() ? "present" : "absent",
-              "ATTRIBUTE_EXTRACTOR", s3EventAttributeExtractor.isPresent() ? "present" : "absent");
-          }
-          this.delegate = Optional.empty();
-        } else {
-          this.delegate = Optional.of(new DashdiveImpl(
-            ingestionBaseUri, apiKey, s3EventAttributeExtractor,
-            shutdownGracePeriod, eventInclusionSampler,
-            disableAllTelemetrySupplier, maxEventDelay, maxMetricsDelay));
-        }
+    boolean isRequiredFieldMissing =
+        !ingestionBaseUri.isPresent()
+            || !apiKey.isPresent()
+            || !s3EventAttributeExtractor.isPresent();
+    boolean wasInstructedToNoOp = useNoOp.orElse(false);
+    if (wasInstructedToNoOp || isRequiredFieldMissing) {
+      if (wasInstructedToNoOp) {
+        logger.info("Dashdive instance will no-op due to explicit instruction");
+      } else if (isRequiredFieldMissing) {
+        logger.warn(
+            "Dashdive instance missing one or more required fields (will no-op):\n"
+                + "{}: {}\n{}: {}\n{}: {}\n",
+            "API_KEY",
+            apiKey.isPresent() ? "present" : "absent",
+            "INGEST_URI",
+            ingestionBaseUri.isPresent() ? "present" : "absent",
+            "ATTRIBUTE_EXTRACTOR",
+            s3EventAttributeExtractor.isPresent() ? "present" : "absent");
       }
+      this.delegate = Optional.empty();
+    } else {
+      this.delegate =
+          Optional.of(
+              new DashdiveImpl(
+                  ingestionBaseUri,
+                  apiKey,
+                  s3EventAttributeExtractor,
+                  shutdownGracePeriod,
+                  eventInclusionSampler,
+                  disableAllTelemetrySupplier,
+                  maxEventDelay,
+                  maxMetricsDelay));
+    }
+  }
 
   /**
    * Construct a new {@link DashdiveBuilder} instance, which is used to configure and create a new
@@ -115,7 +132,9 @@ public class Dashdive implements AutoCloseable {
    */
   public ClientOverrideConfiguration.Builder addInterceptorTo(
       final ClientOverrideConfiguration.Builder overrideConfigBuilder) {
-    return this.delegate.map(d -> d.addInterceptorTo(overrideConfigBuilder)).orElse(overrideConfigBuilder);
+    return this.delegate
+        .map(d -> d.addInterceptorTo(overrideConfigBuilder))
+        .orElse(overrideConfigBuilder);
   }
 
   /**
@@ -149,6 +168,8 @@ public class Dashdive implements AutoCloseable {
    * @return the provided S3 client builder with the Dashdive S3 event interceptor added
    */
   public S3ClientBuilder addConfigWithInterceptorTo(final S3ClientBuilder clientBuilder) {
-    return this.delegate.map(d -> d.addConfigWithInterceptorTo(clientBuilder)).orElse(clientBuilder);
+    return this.delegate
+        .map(d -> d.addConfigWithInterceptorTo(clientBuilder))
+        .orElse(clientBuilder);
   }
 }
