@@ -86,12 +86,14 @@ public class ClientLifecycleTest {
             ignoredMockedClient.getDelegate(),
             ignoredMockedClient.getDelegate(),
             Optional.empty(),
-            true);
+            true,
+            DashdiveImpl.SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY);
     dashdive.blockUntilSetupComplete();
 
     final String fullApiKeyTelemetryPath =
         ConnectionUtils.getFullUri(
-            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_API_KEY).getPath();
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_API_KEY)
+            .getPath();
     List<Optional<String>> matchingRequestBodies =
         startupMockedClient.getRequests().stream()
             .filter(req -> fullApiKeyTelemetryPath.equals(req.request().uri().getPath()))
@@ -155,7 +157,8 @@ public class ClientLifecycleTest {
 
     final String fullLifecycleTelemetryPath =
         ConnectionUtils.getFullUri(
-            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_LIFECYCLE).getPath();
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_LIFECYCLE)
+            .getPath();
     final List<Optional<String>> startupReqBodies =
         startupMockedClient.getRequests().stream()
             .filter(req -> fullLifecycleTelemetryPath.equals(req.request().uri().getPath()))

@@ -19,15 +19,17 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -67,6 +69,12 @@ class DashdiveImpl implements AutoCloseable {
   private final AtomicReference<DashdiveInstanceInfo> instanceInfo;
   private final AtomicInteger targetEventBatchSize;
 
+  private final Optional<String> serviceId;
+  private static final String SERVICE_ID_SYSTEM_PROPERTY_KEY = "sun.java.command";
+
+  @VisibleForTesting
+  static final String SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY = "dashdive.test.serviceId";
+
   private final Optional<Supplier<Boolean>> disableAllTelemetrySupplier;
   private final HttpClient dashdiveHttpClient;
 
@@ -75,6 +83,45 @@ class DashdiveImpl implements AutoCloseable {
   // collection:
   // "s3Client.serviceClientConfiguration().overrideConfiguration().executionInterceptors()
   // .forEach(System.out::println);"
+
+  private static Optional<String> getServiceId(String systemPropertyKey) {
+    final Optional<String> command;
+    try {
+      command = Optional.ofNullable(System.getProperty(systemPropertyKey));
+    } catch (SecurityException | IllegalArgumentException | NullPointerException e) {
+      return Optional.empty();
+    }
+
+    if (command.isEmpty() || command.get().isEmpty()) {
+      return Optional.empty();
+    }
+
+    final String fullyQualifiedClass = getServiceIdFromClassPath(command.get());
+    return Optional.of(fullyQualifiedClass);
+  }
+
+  @VisibleForTesting
+  static String getServiceIdFromClassPath(String classPath) {
+    final List<String> components = new ArrayList<>(Arrays.asList(classPath.split("\\.")));
+
+    if (!components.isEmpty()) {
+      final String lastComponent = components.get(components.size() - 1);
+      if (lastComponent != null
+          && lastComponent.length() > 0
+          && Character.isUpperCase(lastComponent.charAt(0))) {
+        components.remove(components.size() - 1);
+      }
+    }
+
+    if (!components.isEmpty()) {
+      final String lastComponent = components.get(components.size() - 1);
+      if (lastComponent != null && lastComponent.equals("main")) {
+        components.remove(components.size() - 1);
+      }
+    }
+
+    return components.isEmpty() ? classPath : String.join(".", components);
+  }
 
   // Constructors are package-private instead of fully private for testing,
   // to allow for mocked HTTP clients
@@ -92,16 +139,19 @@ class DashdiveImpl implements AutoCloseable {
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient,
       Optional<SetupDefaults> skipSetupWithDefaults,
-      boolean shouldSkipImdsQueries) {
+      boolean shouldSkipImdsQueries,
+      String serviceIdSystemPropertyKey) {
     this.dashdiveHttpClient = dashdiveHttpClient;
 
+    this.serviceId = getServiceId(serviceIdSystemPropertyKey);
     this.isInitialized = new AtomicBoolean(false);
     // Initialize with defaults in case async setup fails
-    Optional<String> defaultClassInstanceId = skipSetupWithDefaults
-        .flatMap(d -> d.dashdiveInstanceInfo().classInstanceId());
+    Optional<String> defaultClassInstanceId =
+        skipSetupWithDefaults.flatMap(d -> d.dashdiveInstanceInfo().classInstanceId());
     this.instanceId = defaultClassInstanceId.orElse(Base64UUID.generate());
-    this.instanceInfo = new AtomicReference<>(
-        ImmutableDashdiveInstanceInfo.builder().classInstanceId(instanceId).build());
+    this.instanceInfo =
+        new AtomicReference<>(
+            ImmutableDashdiveInstanceInfo.builder().classInstanceId(instanceId).build());
     this.targetEventBatchSize = new AtomicInteger(SingleEventBatcher.DEFAULT_TARGET_BATCH_SIZE);
 
     this.ingestBaseUri = ingestBaseUri;
@@ -110,35 +160,46 @@ class DashdiveImpl implements AutoCloseable {
       logger.warn(
           "No S3 event attribute extractor factory provided; using factory for no-op extractor.");
     }
-    final S3EventAttributeExtractor presentS3EventAttributeExtractor = s3EventAttributeExtractor
-        .orElse(new NoOpS3EventAttributeExtractor());
+    final S3EventAttributeExtractor presentS3EventAttributeExtractor =
+        s3EventAttributeExtractor.orElse(new NoOpS3EventAttributeExtractor());
     this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
-    this.batchEventProcessor = new BatchEventProcessor(
-        this.instanceInfo,
-        apiKey,
-        ingestBaseUri,
-        presentS3EventAttributeExtractor,
-        shutdownGracePeriod,
-        disableAllTelemetrySupplier,
-        maxMetricsDelay,
-        batchProcessorHttpClient,
-        metricsHttpClient);
-    this.singleEventBatcher = new SingleEventBatcher(
-        isInitialized, targetEventBatchSize, batchEventProcessor,
-        eventInclusionSampler, maxEventDelay);
-    this.s3RoundTripInterceptor = new S3RoundTripInterceptor(this.singleEventBatcher);
+    this.batchEventProcessor =
+        new BatchEventProcessor(
+            this.instanceInfo,
+            apiKey,
+            ingestBaseUri,
+            presentS3EventAttributeExtractor,
+            shutdownGracePeriod,
+            disableAllTelemetrySupplier,
+            maxMetricsDelay,
+            batchProcessorHttpClient,
+            metricsHttpClient);
+    this.singleEventBatcher =
+        new SingleEventBatcher(
+            isInitialized,
+            targetEventBatchSize,
+            batchEventProcessor,
+            eventInclusionSampler,
+            maxEventDelay);
+    this.s3RoundTripInterceptor =
+        new S3RoundTripInterceptor(
+            this.singleEventBatcher,
+            this.serviceId.isPresent()
+                ? ImmutableMap.of("serviceId", this.serviceId.get())
+                : ImmutableMap.of());
 
-    this.initialSetupWorker = new InitialSetupWorker(
-        setupHttpClient,
-        apiKey,
-        ingestBaseUri,
-        skipSetupWithDefaults,
-        shouldSkipImdsQueries,
-        isInitialized,
-        instanceInfo,
-        targetEventBatchSize,
-        Optional.of(() -> this.batchEventProcessor.notifyInitialized()),
-        !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false));
+    this.initialSetupWorker =
+        new InitialSetupWorker(
+            setupHttpClient,
+            apiKey,
+            ingestBaseUri,
+            skipSetupWithDefaults,
+            shouldSkipImdsQueries,
+            isInitialized,
+            instanceInfo,
+            targetEventBatchSize,
+            Optional.of(() -> this.batchEventProcessor.notifyInitialized()),
+            !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false));
     this.initialSetupWorkerThread = new Thread(this.initialSetupWorker);
     this.initialSetupWorkerThread.setPriority(Thread.MIN_PRIORITY);
     this.initialSetupWorkerThread.start();
@@ -147,6 +208,7 @@ class DashdiveImpl implements AutoCloseable {
     logger.info("Dashdive instance created with id: {}", instanceId);
   }
 
+  // TEST ONLY CONSTRUCTOR
   @VisibleForTesting
   DashdiveImpl(
       URI ingestionBaseUri,
@@ -172,9 +234,11 @@ class DashdiveImpl implements AutoCloseable {
         batchProcessorHttpClient,
         metricsHttpClient,
         skipSetupWithDefaults,
-        false);
+        false,
+        SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY);
   }
 
+  // TEST ONLY CONSTRUCTOR
   @VisibleForTesting
   DashdiveImpl(
       URI ingestBaseUri,
@@ -187,35 +251,52 @@ class DashdiveImpl implements AutoCloseable {
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient,
       Optional<SetupDefaults> skipSetupWithDefaults,
-      boolean shouldSkipImdsQueries) {
-      this(
-          ingestBaseUri,
-          apiKey,
-          s3EventAttributeExtractor,
-          shutdownGracePeriod,
-          eventInclusionSampler,
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          dashdiveHttpClient,
-          setupHttpClient,
-          batchProcessorHttpClient,
-          metricsHttpClient,
-          skipSetupWithDefaults,
-          shouldSkipImdsQueries);
-    }
+      boolean shouldSkipImdsQueries,
+      String serviceIdSystemPropertyKey) {
+    this(
+        ingestBaseUri,
+        apiKey,
+        s3EventAttributeExtractor,
+        shutdownGracePeriod,
+        eventInclusionSampler,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        dashdiveHttpClient,
+        setupHttpClient,
+        batchProcessorHttpClient,
+        metricsHttpClient,
+        skipSetupWithDefaults,
+        shouldSkipImdsQueries,
+        serviceIdSystemPropertyKey);
+  }
 
+  // TEST ONLY CONSTRUCTOR
   @VisibleForTesting
   DashdiveImpl(
       URI ingestionBaseUri,
       String apiKey,
       Optional<S3EventAttributeExtractor> s3EventAttributeExtractor,
       Optional<Duration> shutdownGracePeriod) {
-    this(Optional.of(ingestionBaseUri), Optional.of(apiKey),
-        s3EventAttributeExtractor, shutdownGracePeriod, Optional.empty(),
-        Optional.empty(), Optional.empty(), Optional.empty());
+    this(
+        ingestionBaseUri,
+        apiKey,
+        s3EventAttributeExtractor,
+        shutdownGracePeriod,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        ConnectionUtils.directExecutorHttpClient(),
+        ConnectionUtils.directExecutorHttpClient(),
+        ConnectionUtils.directExecutorHttpClient(),
+        ConnectionUtils.directExecutorHttpClient(),
+        Optional.empty(),
+        false,
+        SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY);
   }
 
+  // Actual production use constructor
   DashdiveImpl(
       // All fields are optional to avoid NullPointerExceptions at runtime;
       // much better to have sends simply fail, for example, when apiKey is not
@@ -244,7 +325,8 @@ class DashdiveImpl implements AutoCloseable {
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
         Optional.empty(),
-        false);
+        false,
+        SERVICE_ID_SYSTEM_PROPERTY_KEY);
   }
 
   public void close() {
@@ -279,36 +361,40 @@ class DashdiveImpl implements AutoCloseable {
     this.singleEventBatcher.shutDownAndFlush();
     this.batchEventProcessor.shutDownAndFlush();
 
-    final ImmutableMap<String, Integer> metricsSinceInception = this.batchEventProcessor
-        .getSerializableMetricsSinceInception();
+    final ImmutableMap<String, Integer> metricsSinceInception =
+        this.batchEventProcessor.getSerializableMetricsSinceInception();
     logger.info("Dashdive instance shutting down. Lifetime metrics: {}", metricsSinceInception);
 
-    final boolean shouldDisableTelemetry = disableAllTelemetrySupplier.map(s -> s.get()).orElse(false);
+    final boolean shouldDisableTelemetry =
+        disableAllTelemetrySupplier.map(s -> s.get()).orElse(false);
     if (shouldDisableTelemetry) {
       return;
     }
     try {
       final ObjectMapper objectMapper = ConnectionUtils.DEFAULT_SERIALIZER;
-      final TelemetryEvent.LifecycleShutdown shutdownPayload = ImmutableTelemetryEvent.LifecycleShutdown.builder()
-          .instanceId(instanceId)
-          .metricsTotal(metricsSinceInception)
-          .build();
+      final TelemetryEvent.LifecycleShutdown shutdownPayload =
+          ImmutableTelemetryEvent.LifecycleShutdown.builder()
+              .instanceId(instanceId)
+              .metricsTotal(metricsSinceInception)
+              .build();
       final String requestBodyJson = objectMapper.writeValueAsString(shutdownPayload);
-      final HttpRequest shutdownTelemetryRequest = HttpRequest.newBuilder()
-          .uri(ConnectionUtils.getFullUri(
-              this.ingestBaseUri, ConnectionUtils.Route.TELEMETRY_LIFECYCLE))
-          .header(
-              ConnectionUtils.Headers.KEY__CONTENT_TYPE,
-              ConnectionUtils.Headers.VAL__CONTENT_JSON)
-          .header(
-              ConnectionUtils.Headers.KEY__USER_AGENT,
-              ConnectionUtils.Headers.getUserAgent(
-                  instanceInfo.get().javaVersion(),
-                  Optional.of(Dashdive.VERSION),
-                  Optional.of(instanceId)))
-          .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
-          .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
-          .build();
+      final HttpRequest shutdownTelemetryRequest =
+          HttpRequest.newBuilder()
+              .uri(
+                  ConnectionUtils.getFullUri(
+                      this.ingestBaseUri, ConnectionUtils.Route.TELEMETRY_LIFECYCLE))
+              .header(
+                  ConnectionUtils.Headers.KEY__CONTENT_TYPE,
+                  ConnectionUtils.Headers.VAL__CONTENT_JSON)
+              .header(
+                  ConnectionUtils.Headers.KEY__USER_AGENT,
+                  ConnectionUtils.Headers.getUserAgent(
+                      instanceInfo.get().javaVersion(),
+                      Optional.of(Dashdive.VERSION),
+                      Optional.of(instanceId)))
+              .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
+              .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
+              .build();
       ConnectionUtils.send(dashdiveHttpClient, shutdownTelemetryRequest);
     } catch (IOException | InterruptedException ignored) {
     }
@@ -316,8 +402,9 @@ class DashdiveImpl implements AutoCloseable {
 
   private ClientOverrideConfiguration.Builder addInterceptorToIdempotentlyTo(
       final ClientOverrideConfiguration.Builder overrideConfigBuilder) {
-    final boolean alreadyHasDashdiveInterceptor = overrideConfigBuilder.executionInterceptors().stream()
-        .anyMatch(interceptor -> interceptor instanceof S3RoundTripInterceptor);
+    final boolean alreadyHasDashdiveInterceptor =
+        overrideConfigBuilder.executionInterceptors().stream()
+            .anyMatch(interceptor -> interceptor instanceof S3RoundTripInterceptor);
     return alreadyHasDashdiveInterceptor
         ? overrideConfigBuilder
         : overrideConfigBuilder.addExecutionInterceptor(this.s3RoundTripInterceptor);
@@ -329,8 +416,8 @@ class DashdiveImpl implements AutoCloseable {
   }
 
   public S3ClientBuilder addConfigWithInterceptorTo(final S3ClientBuilder clientBuilder) {
-    final ClientOverrideConfiguration newOverrideConfig = addInterceptorToIdempotentlyTo(
-        ClientOverrideConfiguration.builder()).build();
+    final ClientOverrideConfiguration newOverrideConfig =
+        addInterceptorToIdempotentlyTo(ClientOverrideConfiguration.builder()).build();
     return clientBuilder.overrideConfiguration(newOverrideConfig);
   }
 

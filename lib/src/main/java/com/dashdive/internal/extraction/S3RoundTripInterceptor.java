@@ -8,6 +8,7 @@ import com.dashdive.internal.telemetry.ImmutableTelemetryItem;
 import com.dashdive.internal.telemetry.TelemetryPayload;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.interceptor.Context;
@@ -19,9 +20,12 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
   private static final Logger logger = LoggerFactory.getLogger(S3RoundTripInterceptor.class);
 
   private final SingleEventBatcher batcher;
+  private final Map<String, Object> additionalPayloadFields;
 
-  public S3RoundTripInterceptor(SingleEventBatcher batcher) {
+  public S3RoundTripInterceptor(
+      SingleEventBatcher batcher, Map<String, Object> additionalPayloadFields) {
     this.batcher = batcher;
+    this.additionalPayloadFields = additionalPayloadFields;
   }
 
   /*
@@ -95,7 +99,8 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
                     // TODO: There doesn't seem to be a way to get `requestBody` from `context`?
                     .httpRequest(context.httpRequest().get())
                     .httpResponse(context.httpResponse().get())
-                    .build());
+                    .build(),
+                this.additionalPayloadFields);
 
         final S3SingleExtractedEvent extractedPayloadWithTelemetry =
             ImmutableS3SingleExtractedEvent.builder()
@@ -136,7 +141,8 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
                   .requestBody(context.requestBody())
                   .httpRequest(context.httpRequest())
                   .httpResponse(context.httpResponse())
-                  .build());
+                  .build(),
+              this.additionalPayloadFields);
       return this.batcher.queueEventForIngestion(extractedPayload);
     } catch (Exception exception) {
       logger.error("Failed to extract or enqueue S3 event payload in `afterExecution`", exception);

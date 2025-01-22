@@ -13,6 +13,7 @@ import java.time.DateTimeException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -30,9 +31,11 @@ public class S3RoundTripExtractor {
 
   @VisibleForTesting public static final String S3_RESPONSE_DATE_HEADER = "date";
 
-  public static S3SingleExtractedEvent extractEventPayloadSafely(S3RoundTripData roundTripData) {
+  // `additinoalPayloadFields` CANNOT contain any null values
+  public static S3SingleExtractedEvent extractEventPayloadSafely(
+      S3RoundTripData roundTripData, Map<String, Object> additionalPayloadFields) {
     try {
-      return extractEventPayload(roundTripData);
+      return extractEventPayload(roundTripData, additionalPayloadFields);
     } catch (Exception exception) {
       return ImmutableS3SingleExtractedEvent.builder()
           .hasIrrecoverableErrors(true)
@@ -44,6 +47,8 @@ public class S3RoundTripExtractor {
                           ImmutableMap.of(
                               "inputData",
                               roundTripData,
+                              "additionalPayloadFields",
+                              additionalPayloadFields,
                               "exception",
                               ExceptionUtil.getSerializableExceptionData(exception)))
                       .build()))
@@ -51,7 +56,8 @@ public class S3RoundTripExtractor {
     }
   }
 
-  private static S3SingleExtractedEvent extractEventPayload(S3RoundTripData roundTripData) {
+  private static S3SingleExtractedEvent extractEventPayload(
+      S3RoundTripData roundTripData, Map<String, Object> additionalPayloadFields) {
     final TelemetryPayload.Builder telemetryWarningsBuilder = TelemetryPayload.builder();
 
     // Extract timestamp
@@ -131,6 +137,7 @@ public class S3RoundTripExtractor {
     final ImmutableMap<String, Object> dataPayload =
         ImmutableMap.<String, Object>builder()
             .putAll(baseDataFields)
+            .putAll(additionalPayloadFields)
             // There shouldn't be any overriding keys in the distinct fields,
             // but if there are, distinct field keys will take precedence
             .putAll(distinctData.distinctFields())

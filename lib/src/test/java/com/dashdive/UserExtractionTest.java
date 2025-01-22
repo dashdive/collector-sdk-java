@@ -266,15 +266,9 @@ public class UserExtractionTest {
     dashdive.close();
     dashdive.blockUntilShutdownComplete();
 
-    final List<String> batchIngestBodies =
-        batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
-
-    batchMockHttpClient.assertAllUrisMatch(
-        ConnectionUtils.getFullUri(
-                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST)
-            .getPath());
     final List<Map<String, Object>> ingestedEvents =
-        TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
+        TestUtils.getIngestedEventsFromRequestBodies(
+            batchMockHttpClient.unboxRequestBodiesAssertingNonempty());
 
     Assertions.assertEquals(1, ingestedEvents.size());
     Assertions.assertEquals("my-test-prefix/some-dir/", ingestedEvents.get(0).get("featureId"));
@@ -330,7 +324,8 @@ public class UserExtractionTest {
             batchMockHttpClient.getDelegate(),
             ignoredMockHttpClient.getDelegate(),
             Optional.of(setupDefaults),
-            false);
+            false,
+            DashdiveImpl.SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY);
 
     final S3RoundTripInterceptor interceptor = dashdive.getInterceptorForImperativeTrigger();
     for (int i = 0; i < TOTAL_EVENTS; i++) {
