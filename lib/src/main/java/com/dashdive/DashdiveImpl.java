@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -92,17 +94,55 @@ class DashdiveImpl implements AutoCloseable {
       return Optional.empty();
     }
 
-    if (command.isEmpty() || command.get().isEmpty()) {
+    if (command.isEmpty()) {
       return Optional.empty();
     }
 
-    final String fullyQualifiedClass = getServiceIdFromClassPath(command.get());
-    return Optional.of(fullyQualifiedClass);
+    return getServiceIdFromStartCommand(command.get());
   }
 
+  private static final Pattern SERVICE_NAME_PATTERN_CLASSNAME = Pattern.compile("^(\\w+\\.)*\\w+$");
+
   @VisibleForTesting
-  static String getServiceIdFromClassPath(String classPath) {
-    final List<String> components = new ArrayList<>(Arrays.asList(classPath.split("\\.")));
+  static Optional<String> getServiceIdFromStartCommand(String startCommand) {
+    final String[] parts = startCommand.split(" ");
+    if (parts.length == 0) {
+      return Optional.empty();
+    }
+
+    final String commandName = parts[0];
+    if (commandName.isEmpty()) {
+      return Optional.empty();
+    }
+
+    if (commandName.endsWith(".jar")) {
+      return getServiceIdFromJar(commandName);
+    }
+
+    if (SERVICE_NAME_PATTERN_CLASSNAME.matcher(commandName).find()) {
+      return Optional.of(getServiceIdFromClassName(commandName));
+    }
+
+    // Just send something so we can debug
+    return Optional.of(commandName);
+  }
+
+  // Match the beginning of the version by matching the first
+  // alphanumeric token that is purely a number and followed by a dot,
+  // and return everything preceding that token and the prior delimiter.
+  private static final Pattern SERVICE_NAME_PATTERN_JAR =
+      Pattern.compile("^(.*?)[^a-zA-Z0-9]\\d+\\.");
+
+  private static Optional<String> getServiceIdFromJar(String jarName) {
+    Matcher matcher = SERVICE_NAME_PATTERN_JAR.matcher(jarName);
+    if (matcher.find()) {
+      return Optional.of(matcher.group(1));
+    }
+    return Optional.of(jarName);
+  }
+
+  private static String getServiceIdFromClassName(String className) {
+    final List<String> components = new ArrayList<>(Arrays.asList(className.split("\\.")));
 
     if (!components.isEmpty()) {
       final String lastComponent = components.get(components.size() - 1);
@@ -120,7 +160,7 @@ class DashdiveImpl implements AutoCloseable {
       }
     }
 
-    return components.isEmpty() ? classPath : String.join(".", components);
+    return components.isEmpty() ? className : String.join(".", components);
   }
 
   // Constructors are package-private instead of fully private for testing,

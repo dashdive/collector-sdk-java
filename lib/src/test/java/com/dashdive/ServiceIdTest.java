@@ -28,12 +28,18 @@ public class ServiceIdTest {
             Pair.of("com.rhombus.cloud.rs3.main.Main", "com.rhombus.cloud.rs3"),
             Pair.of(
                 "com.rhombus.cloud.sqsconsumer.pose.service.main.SqsConsumerPoseApplication",
-                "com.rhombus.cloud.sqsconsumer.pose.service"));
+                "com.rhombus.cloud.sqsconsumer.pose.service"),
+            Pair.of(
+                "com.dashdive.some_svc.MainClass -Dsome.key=some.value --some_arg vals",
+                "com.dashdive.some_svc"),
+            Pair.of(
+                "rhombus-cloud-sqsconsumer-graphics-service-1.0.18-17-g7efbbaa.jar   ",
+                "rhombus-cloud-sqsconsumer-graphics-service"));
 
     for (Pair<String, String> testCase : testCases) {
       String input = testCase.getLeft();
       String expected = testCase.getRight();
-      String actual = DashdiveImpl.getServiceIdFromClassPath(input);
+      String actual = DashdiveImpl.getServiceIdFromStartCommand(input).orElse("");
       Assertions.assertEquals(expected, actual);
     }
   }
