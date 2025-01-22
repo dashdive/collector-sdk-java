@@ -57,10 +57,14 @@ class TestUtils {
   public static final InterceptorContext GENERIC_INTERCEPTED_EVENT =
       getListObjectsV2Event("test-bucket");
 
-  // Used as a makeshift "simplest possible" event with the bucket name as an ID of sorts
   public static InterceptorContext getListObjectsV2Event(String bucketName) {
+    return getListObjectsV2Event(bucketName, "");
+  }
+
+  // Used as a makeshift "simplest possible" event with the bucket name as an ID of sorts
+  public static InterceptorContext getListObjectsV2Event(String bucketName, String prefix) {
     final ListObjectsV2Request artificialPojoRequest =
-        ListObjectsV2Request.builder().bucket(bucketName).build();
+        ListObjectsV2Request.builder().bucket(bucketName).prefix(prefix).build();
     final ListObjectsV2Response artificialPojoResponse =
         ListObjectsV2Response.builder().contents(List.of()).build();
     final SdkHttpRequest artificialSdkHttpRequest =

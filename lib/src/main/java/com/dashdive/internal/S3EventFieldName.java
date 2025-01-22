@@ -22,6 +22,8 @@ public class S3EventFieldName {
   public static final String MULTIPART_UPLOAD_ID = "uploadId";
   public static final String MULTIPART_PART_NUMBER = "partNumber";
 
+  public static final String OBJECT_KEY_PREFIX = "objectKeyPrefix";
+
   public static class Intermediate {
     // For inferring the region of the bucket for the `isBillableEgress` field
     public static final String EGRESS_FULL_HOST = "_egressFullHost";

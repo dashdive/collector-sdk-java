@@ -138,7 +138,12 @@ public class S3SingleEventProcessor {
             .s3Provider(s3Provider)
             .bucketName(
                 Optional.ofNullable((String) initEventData.get(S3EventFieldName.BUCKET_NAME)))
-            .objectKey(Optional.ofNullable((String) initEventData.get(S3EventFieldName.OBJECT_KEY)))
+            .objectKey(
+                Optional.ofNullable(
+                    (String)
+                        (initEventData.get(S3EventFieldName.OBJECT_KEY) != null
+                            ? initEventData.get(S3EventFieldName.OBJECT_KEY)
+                            : initEventData.get(S3EventFieldName.OBJECT_KEY_PREFIX))))
             .build();
     final S3EventAttributes nullableUserExtractedAttributes =
         s3EventAttributeExtractor == null

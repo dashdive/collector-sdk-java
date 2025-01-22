@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,12 +27,18 @@ import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.DeletedObject;
 import software.amazon.awssdk.services.s3.model.GetBucketIntelligentTieringConfigurationRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketIntelligentTieringConfigurationResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Error;
 
 public class InternalExtractionTest {
   private static final String DATE_HEADER_VAL = "Wed, 01 Apr 2020 00:00:00 GMT";
@@ -105,7 +112,8 @@ public class InternalExtractionTest {
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
     batchMockHttpClient.assertAllUrisMatch(
         ConnectionUtils.getFullUri(
-            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST).getPath());
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST)
+            .getPath());
     final List<Map<String, Object>> ingestedEvents =
         TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
 
@@ -260,6 +268,88 @@ public class InternalExtractionTest {
         expectedPayload);
   }
 
+  @Test
+  void testDeleteObjects() {
+    final String OBJECT_KEY_1 = "shared-prefix/test-my-key-1";
+    final String OBJECT_KEY_2 = "shared-prefix/test-key-2";
+    final String OBJECT_KEY_3 = "shared/test-key-nonexistent";
+    final String BUCKET_NAME = "test-bucket";
+
+    final DeleteObjectsRequest artificialPojoRequest =
+        DeleteObjectsRequest.builder()
+            .bucket(BUCKET_NAME)
+            .delete(
+                Delete.builder()
+                    .objects(
+                        ObjectIdentifier.builder().key(OBJECT_KEY_1).build(),
+                        ObjectIdentifier.builder().key(OBJECT_KEY_2).build(),
+                        ObjectIdentifier.builder().key(OBJECT_KEY_3).build())
+                    .build())
+            .build();
+
+    final DeleteObjectsResponse artificialPojoResponse =
+        DeleteObjectsResponse.builder()
+            .deleted(
+                Arrays.asList(
+                    DeletedObject.builder().key(OBJECT_KEY_1).deleteMarker(false).build(),
+                    DeletedObject.builder().key(OBJECT_KEY_2).deleteMarker(false).build()))
+            .errors(
+                Arrays.asList(
+                    S3Error.builder()
+                        .key(OBJECT_KEY_3)
+                        .code("NoSuchKey")
+                        .message("The specified key does not exist")
+                        .build()))
+            .build();
+
+    final SdkHttpRequest artificialSdkHttpRequest =
+        SdkHttpFullRequest.builder()
+            .method(SdkHttpMethod.POST)
+            .protocol("https")
+            .host(BUCKET_NAME + ".s3.us-west-1.amazonaws.com")
+            .encodedPath("/")
+            .rawQueryParameters(ImmutableMap.of("delete", List.of("")))
+            .build();
+
+    final SdkHttpResponse artificialSdkHttpResponse =
+        SdkHttpResponse.builder()
+            .statusCode(200)
+            .statusText("OK")
+            .headers(
+                ImmutableMap.of(
+                    "Content-Type", List.of("application/xml"),
+                    "Date", List.of(DATE_HEADER_VAL)))
+            .build();
+
+    final String expectedSharedObjectPrefix = "shared";
+    final Map<String, Object> expectedPayload =
+        Map.of(
+            "action",
+            "DeleteObjects",
+            "timestamp",
+            EXTRACTED_DATE_VAL,
+            "provider",
+            "aws",
+            "bucket",
+            BUCKET_NAME,
+            "objectKeyPrefix",
+            expectedSharedObjectPrefix,
+            "deletedObjects",
+            Arrays.asList(
+                Map.of("objectKey", OBJECT_KEY_1, "resultingDeleteMarkerVersionId", ""),
+                Map.of("objectKey", OBJECT_KEY_2, "resultingDeleteMarkerVersionId", "")),
+            "customerId",
+            TestUtils.EXTRACTOR_CUSTOMER_VAL);
+
+    doSingleEventExtractionTest(
+        "DeleteObjects",
+        artificialPojoRequest,
+        artificialPojoResponse,
+        artificialSdkHttpRequest,
+        artificialSdkHttpResponse,
+        expectedPayload);
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   void testExtractionException() {
@@ -297,7 +387,7 @@ public class InternalExtractionTest {
 
     batchMockHttpClient.assertAllUrisMatch(
         ConnectionUtils.getFullUri(
-            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES)
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES)
             .getPath());
     final List<String> issueEventStrings =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();

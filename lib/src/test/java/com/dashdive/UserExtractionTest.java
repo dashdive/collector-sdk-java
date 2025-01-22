@@ -85,7 +85,8 @@ public class UserExtractionTest {
 
     final String extractionIssuesPath =
         ConnectionUtils.getFullUri(
-            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES)
+            .getPath();
     final List<Optional<String>> extractionIssuesReqBodies =
         batchMockHttpClient.getRequests().stream()
             .filter(req -> extractionIssuesPath.equals(req.request().uri().getPath()))
@@ -138,7 +139,8 @@ public class UserExtractionTest {
 
     final String extractionIssuesPath =
         ConnectionUtils.getFullUri(
-            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES).getPath();
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES)
+            .getPath();
     final List<Optional<String>> extractionIssuesReqBodies =
         batchMockHttpClient.getRequests().stream()
             .filter(req -> extractionIssuesPath.equals(req.request().uri().getPath()))
@@ -207,9 +209,11 @@ public class UserExtractionTest {
 
     final List<String> batchIngestBodies =
         batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
+
     batchMockHttpClient.assertAllUrisMatch(
         ConnectionUtils.getFullUri(
-            Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST).getPath());
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST)
+            .getPath());
     final List<Map<String, Object>> ingestedEvents =
         TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
 
@@ -221,6 +225,59 @@ public class UserExtractionTest {
       Assertions.assertEquals("feature-" + i, event.get("featureId"));
       Assertions.assertEquals("test-bucket-" + i, event.get("bucket"));
     }
+  }
+
+  @Test
+  void userExtractorWorksWithPrefix() {
+    final S3EventAttributeExtractor factoryWithObjectKey =
+        (input) -> {
+          return ImmutableS3EventAttributes.builder()
+              .featureId(input.objectKey().orElse("NONE"))
+              .build();
+        };
+
+    final MockHttpClient ignoredMockHttpClient = new MockHttpClient();
+    final MockHttpClient batchMockHttpClient = new MockHttpClient();
+
+    final SetupDefaults setupDefaults =
+        ImmutableSetupDefaults.builder()
+            .dashdiveInstanceInfo(
+                ImmutableDashdiveInstanceInfo.builder().classInstanceId("prefix-extractor").build())
+            .targetEventBatchSize(1)
+            .startupTelemetryWarnings(TelemetryPayload.of())
+            .build();
+    final DashdiveImpl dashdive =
+        new DashdiveImpl(
+            Dashdive.DEFAULT_INGEST_BASE_URI,
+            TestUtils.API_KEY_DUMMY,
+            Optional.of(factoryWithObjectKey),
+            Optional.empty(),
+            ignoredMockHttpClient.getDelegate(),
+            ignoredMockHttpClient.getDelegate(),
+            batchMockHttpClient.getDelegate(),
+            ignoredMockHttpClient.getDelegate(),
+            Optional.of(setupDefaults));
+
+    final S3RoundTripInterceptor interceptor = dashdive.getInterceptorForImperativeTrigger();
+    interceptor.afterExecution(
+        TestUtils.getListObjectsV2Event("test-bucket-0", "my-test-prefix/some-dir/"),
+        TestUtils.EXEC_ATTRS_EMPTY);
+
+    dashdive.close();
+    dashdive.blockUntilShutdownComplete();
+
+    final List<String> batchIngestBodies =
+        batchMockHttpClient.unboxRequestBodiesAssertingNonempty();
+
+    batchMockHttpClient.assertAllUrisMatch(
+        ConnectionUtils.getFullUri(
+                Dashdive.DEFAULT_INGEST_BASE_URI, ConnectionUtils.Route.S3_BATCH_INGEST)
+            .getPath());
+    final List<Map<String, Object>> ingestedEvents =
+        TestUtils.getIngestedEventsFromRequestBodies(batchIngestBodies);
+
+    Assertions.assertEquals(1, ingestedEvents.size());
+    Assertions.assertEquals("my-test-prefix/some-dir/", ingestedEvents.get(0).get("featureId"));
   }
 
   @Test
@@ -254,7 +311,7 @@ public class UserExtractionTest {
             .targetEventBatchSize(BATCH_SIZE)
             .startupTelemetryWarnings(TelemetryPayload.of())
             .build();
-    
+
     final AtomicInteger eventIndex = new AtomicInteger(0);
     final DashdiveImpl dashdive =
         new DashdiveImpl(
@@ -263,10 +320,11 @@ public class UserExtractionTest {
             Optional.of(factoryWithFeatureId),
             Optional.empty(),
             // Include every other event starting with the first one
-            Optional.of(() -> {
-                int prevEventIndex = eventIndex.getAndIncrement(); 
-                return prevEventIndex % 2 == 0;
-            }),
+            Optional.of(
+                () -> {
+                  int prevEventIndex = eventIndex.getAndIncrement();
+                  return prevEventIndex % 2 == 0;
+                }),
             ignoredMockHttpClient.getDelegate(),
             ignoredMockHttpClient.getDelegate(),
             batchMockHttpClient.getDelegate(),

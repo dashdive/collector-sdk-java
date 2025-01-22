@@ -5,6 +5,7 @@ import com.dashdive.internal.S3EventFieldName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -67,6 +68,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ListPartsRequest;
 import software.amazon.awssdk.services.s3.model.ListPartsResponse;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutBucketAclRequest;
 import software.amazon.awssdk.services.s3.model.PutBucketAclResponse;
 import software.amazon.awssdk.services.s3.model.PutBucketCorsRequest;
@@ -317,7 +319,7 @@ public class S3DistinctEventDataExtractor {
     // Switching on strings is very performant in Java, roughly O(1)
     // See: https://stackoverflow.com/a/22110821/14816795
     switch (actionType) {
-        // "Object modification" event types
+      // "Object modification" event types
       case GET_OBJECT:
         distinctFields =
             extractDistinctFieldsForEventType_GetObject(
@@ -351,14 +353,14 @@ public class S3DistinctEventDataExtractor {
                 (DeleteObjectsResponse) roundTripData.pojoResponse());
         break;
 
-        // "Global" event types
+      // "Global" event types
       case LIST_BUCKETS:
         distinctFields =
             extractDistinctFieldsForEventTypes_Global(
                 roundTripData.pojoRequest(), roundTripData.pojoResponse());
         break;
 
-        // "Multipart upload" event types
+      // "Multipart upload" event types
       case CREATE_MULTIPART_UPLOAD:
         distinctFields =
             extractDistinctFieldsForEventType_CreateMultipartUpload(
@@ -403,7 +405,20 @@ public class S3DistinctEventDataExtractor {
                 (ListMultipartUploadsResponse) roundTripData.pojoResponse());
         break;
 
-        // "Per-bucket" event types (all contain `bucket()` accessor)
+      case LIST_OBJECTS_V2:
+        distinctFields =
+            extractDistinctFieldsForEventType_ListObjectsV2(
+                (ListObjectsV2Request) roundTripData.pojoRequest(),
+                (ListObjectsV2Response) roundTripData.pojoResponse());
+        break;
+      case LIST_OBJECT_VERSIONS:
+        distinctFields =
+            extractDistinctFieldsForEventType_ListObjectVersions(
+                (ListObjectVersionsRequest) roundTripData.pojoRequest(),
+                (ListObjectVersionsResponse) roundTripData.pojoResponse());
+        break;
+
+      // "Per-bucket" event types (all contain `bucket()` accessor)
       case DELETE_BUCKET:
       case HEAD_BUCKET:
       case CREATE_BUCKET:
@@ -419,14 +434,12 @@ public class S3DistinctEventDataExtractor {
       case DELETE_BUCKET_ENCRYPTION:
       case GET_OBJECT_LOCK_CONFIGURATION:
       case PUT_OBJECT_LOCK_CONFIGURATION:
-      case LIST_OBJECTS_V2:
-      case LIST_OBJECT_VERSIONS:
         distinctFields =
             extractDistinctFieldsForMultipleEventTypes_PerBucket(
                 roundTripData.pojoRequest(), roundTripData.pojoResponse());
         break;
 
-        // "Simple per-object" event types (all contain `key()` accessor)
+      // "Simple per-object" event types (all contain `key()` accessor)
       case HEAD_OBJECT:
       case GET_OBJECT_ACL:
       case PUT_OBJECT_ACL:
@@ -517,33 +530,84 @@ public class S3DistinctEventDataExtractor {
         safeHardVersionId);
   }
 
+  private static String findCommonPrefix(List<ObjectIdentifier> objects) {
+    if (objects.isEmpty()) {
+      return "";
+    }
+
+    String firstKey = objects.get(0).key();
+    int maxPrefixLength =
+        objects.stream().map(obj -> obj.key()).map(String::length).min(Integer::compare).orElse(0);
+
+    StringBuilder commonPrefix = new StringBuilder();
+    for (int pos = 0; pos < maxPrefixLength; pos++) {
+      final int i = pos; // Create effectively final variable for use in lambda
+      char currentChar = firstKey.charAt(i);
+      if (objects.stream().allMatch(obj -> obj.key().charAt(i) == currentChar)) {
+        commonPrefix.append(currentChar);
+      } else {
+        break;
+      }
+    }
+    return commonPrefix.toString();
+  }
+
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_DeleteObjects(
       DeleteObjectsRequest request, DeleteObjectsResponse response) {
+    final List<ObjectIdentifier> requestedDeletes = request.delete().objects();
+    final String commonPrefix = findCommonPrefix(requestedDeletes);
+
     /*
      * - If "VersionId" is present, the object (whether data obj or marker obj) was hard deleted (ignore "DeleteMarkerVersionId" if present)
      * - If "VersionId" is not present, a new delete marker was created with ID "DeleteMarkerVersionId"
      * - "DeleteMarker" flag can be ignored entirely
      */
+    ImmutableList<ImmutableMap<String, String>> deletedObjects =
+        response.deleted().stream()
+            .map(
+                (deletedObj) -> {
+                  final String safeVersionId =
+                      Optional.ofNullable(deletedObj.versionId()).orElse("");
+                  final String safeDeleteMarkerVersionId =
+                      Optional.ofNullable(deletedObj.deleteMarkerVersionId()).orElse("");
+                  return ImmutableMap.of(
+                      S3EventFieldName.OBJECT_KEY,
+                      deletedObj.key(),
+                      safeVersionId.isEmpty()
+                          ? S3EventFieldName.DELETE_SOFT_ID
+                          : S3EventFieldName.DELETE_HARD_ID,
+                      safeVersionId.isEmpty() ? safeDeleteMarkerVersionId : safeVersionId);
+                })
+            .collect(ImmutableList.toImmutableList());
 
+    return commonPrefix == null
+        ? ImmutableMap.of(
+            S3EventFieldName.BUCKET_NAME,
+            request.bucket(),
+            S3EventFieldName.DELETED_OBJECTS,
+            deletedObjects)
+        : ImmutableMap.of(
+            S3EventFieldName.BUCKET_NAME, request.bucket(),
+            S3EventFieldName.OBJECT_KEY_PREFIX, commonPrefix,
+            S3EventFieldName.DELETED_OBJECTS, deletedObjects);
+  }
+
+  private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_ListObjectsV2(
+      ListObjectsV2Request request, ListObjectsV2Response response) {
     return ImmutableMap.of(
-        S3EventFieldName.BUCKET_NAME, request.bucket(),
-        S3EventFieldName.DELETED_OBJECTS,
-            response.deleted().stream()
-                .map(
-                    (deletedObj) -> {
-                      final String safeVersionId =
-                          Optional.ofNullable(deletedObj.versionId()).orElse("");
-                      final String safeDeleteMarkerVersionId =
-                          Optional.ofNullable(deletedObj.deleteMarkerVersionId()).orElse("");
-                      return ImmutableMap.of(
-                          S3EventFieldName.OBJECT_KEY,
-                          deletedObj.key(),
-                          safeVersionId.isEmpty()
-                              ? S3EventFieldName.DELETE_SOFT_ID
-                              : S3EventFieldName.DELETE_HARD_ID,
-                          safeVersionId.isEmpty() ? safeDeleteMarkerVersionId : safeVersionId);
-                    })
-                .collect(ImmutableList.toImmutableList()));
+        S3EventFieldName.BUCKET_NAME,
+        request.bucket(),
+        S3EventFieldName.OBJECT_KEY_PREFIX,
+        request.prefix() == null ? "" : request.prefix());
+  }
+
+  private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_ListObjectVersions(
+      ListObjectVersionsRequest request, ListObjectVersionsResponse response) {
+    return ImmutableMap.of(
+        S3EventFieldName.BUCKET_NAME,
+        request.bucket(),
+        S3EventFieldName.OBJECT_KEY_PREFIX,
+        request.prefix() == null ? "" : request.prefix());
   }
 
   // "Multipart upload" event types
