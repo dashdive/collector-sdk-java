@@ -181,6 +181,8 @@ class DashdiveImpl implements AutoCloseable {
       Optional<SetupDefaults> skipSetupWithDefaults,
       boolean shouldSkipImdsQueries,
       String serviceIdSystemPropertyKey) {
+    long startTime = System.currentTimeMillis();
+
     this.dashdiveHttpClient = dashdiveHttpClient;
 
     this.serviceId = getServiceId(serviceIdSystemPropertyKey);
@@ -245,7 +247,9 @@ class DashdiveImpl implements AutoCloseable {
     this.initialSetupWorkerThread.start();
     this.isShutDown = new AtomicBoolean(false);
 
-    logger.info("Dashdive instance created with id: {}", instanceId);
+    long endTime = System.currentTimeMillis();
+    long duration = endTime - startTime;
+    logger.info("Dashdive instance created with id: {} in {}ms", instanceId, duration);
   }
 
   // TEST ONLY CONSTRUCTOR
