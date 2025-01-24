@@ -4,7 +4,6 @@ import com.dashdive.internal.PriorityThreadFactory;
 import com.dashdive.internal.S3EventFieldName;
 import com.dashdive.internal.S3SingleExtractedEvent;
 import com.google.common.annotations.VisibleForTesting;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,13 +11,13 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,6 +122,8 @@ public class SingleEventBatcher {
   private static final int EXECUTOR_CORE_POOL_SIZE = 1;
   private final ScheduledThreadPoolExecutor allThreadsTimer;
 
+  // We can't use ThreadLocal because the batches can sometimes be flushed by
+  // a scheduled thread to prevent events from getting too old
   private final ConcurrentHashMap<Long, List<S3SingleExtractedEvent>> batchesByThread;
   private final ConcurrentHashMap<Long, ScheduledFuture<Void>> batchMaxAgeTasksByThread;
   private final PerKeyLocks<Long> batchRemovalLocksByThread;
@@ -132,32 +133,11 @@ public class SingleEventBatcher {
 
   private final AtomicBoolean isShutDown;
 
-  public SingleEventBatcher(
-      AtomicBoolean isInitialized,
-      AtomicInteger targetEventBatchSize,
-      BatchEventProcessor batchEventProcessor,
-      Optional<Supplier<Boolean>> eventInclusionSampler,
-      Optional<Duration> maxEventDelay) {
-    this.isInitialized = isInitialized;
-    this.targetEventBatchSize = targetEventBatchSize;
-    this.eventMaxAgeMs = maxEventDelay.map(d -> d.toMillis()).orElse(DEFAULT_EVENT_MAX_AGE_MS);
-
-    this.batchesByThread = new ConcurrentHashMap<>();
-    this.batchMaxAgeTasksByThread = new ConcurrentHashMap<>();
-    this.batchRemovalLocksByThread = new PerKeyLocks<>();
-    this.allThreadsTimer = new ScheduledThreadPoolExecutor(
-        EXECUTOR_CORE_POOL_SIZE, new PriorityThreadFactory(Thread.MIN_PRIORITY));
-    this.allThreadsTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(true);
-    this.allThreadsTimer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
-
-    this.batchEventProcessor = batchEventProcessor;
-    this.eventInclusionSampler = eventInclusionSampler;
-    this.isShutDown = new AtomicBoolean(false);
-  }
-
   public static final int DEFAULT_TARGET_BATCH_SIZE = 200;
   private static final long DEFAULT_EVENT_MAX_AGE_MS = 10 * 60 * 1_000;
   private final long eventMaxAgeMs;
+  private static final long DEFAULT_MAX_JITTER_MS = 5 * 1_000;
+  private final long maxJitterMs;
   // `java -jar jol-cli-latest.jar internals -classpath lib/build/classes/java/main
   // com.dashdive.ImmutableS3SingleExtractedEvent`
   // Ballpark size of S3SingleExtractedEvent object:
@@ -180,6 +160,33 @@ public class SingleEventBatcher {
   // Source: https://spring.io/blog/2015/12/10/spring-boot-memory-performance
   private static final int HARD_MAX_QUEUE_LEN_PER_THREAD = 1000;
 
+  public SingleEventBatcher(
+      AtomicBoolean isInitialized,
+      AtomicInteger targetEventBatchSize,
+      BatchEventProcessor batchEventProcessor,
+      Optional<Supplier<Boolean>> eventInclusionSampler,
+      Optional<Duration> maxEventDelay,
+      Optional<Duration> maxJitter) {
+    this.isInitialized = isInitialized;
+    this.targetEventBatchSize = targetEventBatchSize;
+    this.eventMaxAgeMs = maxEventDelay.map(d -> d.toMillis()).orElse(DEFAULT_EVENT_MAX_AGE_MS);
+    this.maxJitterMs = maxJitter.map(d -> d.toMillis()).orElse(DEFAULT_MAX_JITTER_MS);
+
+    this.batchesByThread = new ConcurrentHashMap<>();
+    this.batchMaxAgeTasksByThread = new ConcurrentHashMap<>();
+    this.batchRemovalLocksByThread = new PerKeyLocks<>();
+    this.allThreadsTimer =
+        new ScheduledThreadPoolExecutor(
+            EXECUTOR_CORE_POOL_SIZE,
+            new PriorityThreadFactory(Thread.MIN_PRIORITY, "dashdive-per-thread-timer"));
+    this.allThreadsTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(true);
+    this.allThreadsTimer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
+
+    this.batchEventProcessor = batchEventProcessor;
+    this.eventInclusionSampler = eventInclusionSampler;
+    this.isShutDown = new AtomicBoolean(false);
+  }
+
   public void shutDownAndFlush() {
     isShutDown.set(true);
     allThreadsTimer.shutdownNow();
@@ -201,7 +208,7 @@ public class SingleEventBatcher {
           event.dataPayload().get(S3EventFieldName.ACTION_TYPE));
       return false;
     }
-    
+
     if (eventInclusionSampler.isPresent() && !eventInclusionSampler.get().get()) {
       return false;
     }
@@ -250,6 +257,8 @@ public class SingleEventBatcher {
     } else {
       // If we're here, batch has at least one element, so we need to schedule a batch removal
       if (!batchMaxAgeTasksByThread.containsKey(threadId)) {
+        final long jitterMs =
+            maxJitterMs == 0 ? 0 : ThreadLocalRandom.current().nextLong(0, maxJitterMs);
         final ScheduledFuture<Void> nextScheduledBatchRemoval =
             allThreadsTimer.schedule(
                 () -> {
@@ -262,7 +271,7 @@ public class SingleEventBatcher {
                   }
                   return null;
                 },
-                eventMaxAgeMs,
+                eventMaxAgeMs + jitterMs,
                 TimeUnit.MILLISECONDS);
         batchMaxAgeTasksByThread.put(threadId, nextScheduledBatchRemoval);
       }
@@ -275,7 +284,10 @@ public class SingleEventBatcher {
       return;
     }
     // The `enqueueOrDropBatch` function is expected to not be indefinitely blocking
-    // and ideally takes very little time at all
+    // and ideally takes very little time at all, although IT IS WRITING TO A GLOBALLY
+    // SHARED QUEUE AND THUS WILL INCUR SOME DEGREE OF LOCK CONTENTION.
+    // But the setup of aggressively batching per-thread is meant to minimize this.
+    // To diagnose, we'd look for an uptick in Thread BLOCKED count in New Relic.
     batchEventProcessor.enqueueOrDropBatch(batch);
 
     // Remove the ArrayList every time a batch is sent, so when the

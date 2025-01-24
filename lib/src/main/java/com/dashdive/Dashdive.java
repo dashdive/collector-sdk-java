@@ -21,7 +21,7 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 @Value.Style(newBuilder = "builder")
 public class Dashdive implements AutoCloseable {
   /** The version of the Dashdive SDK. */
-  public static final String VERSION = "1.0.7";
+  public static final String VERSION = "1.0.8";
 
   public static final URI DEFAULT_INGEST_BASE_URI = URI.create("https://ingest.dashdive.com");
 

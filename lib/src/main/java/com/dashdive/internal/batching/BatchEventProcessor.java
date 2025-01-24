@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
-
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,10 +47,9 @@ class PausableThreadPoolExecutor extends ThreadPoolExecutor {
       int maximumPoolSize,
       long keepAliveTime,
       TimeUnit unit,
-      BlockingQueue<Runnable> workQueue) {
-    super(
-        corePoolSize, maximumPoolSize, keepAliveTime, unit,
-        workQueue, new PriorityThreadFactory(Thread.MIN_PRIORITY));
+      BlockingQueue<Runnable> workQueue,
+      PriorityThreadFactory threadFactory) {
+    super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
     isPaused = false;
   }
 
@@ -129,9 +127,14 @@ public class BatchEventProcessor {
       // own manager threads.
       HttpClient batchProcessorHttpClient,
       HttpClient metricsHttpClient) {
-    this.metrics = new EventPipelineMetrics(
-            instanceInfo, apiKey, ingestBaseUri,
-            metricsHttpClient, maxMetricsDelay, disableAllTelemetrySupplier);
+    this.metrics =
+        new EventPipelineMetrics(
+            instanceInfo,
+            apiKey,
+            ingestBaseUri,
+            metricsHttpClient,
+            maxMetricsDelay,
+            disableAllTelemetrySupplier);
     this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
     this.httpClient = batchProcessorHttpClient;
     this.userAgent = "";
@@ -151,7 +154,8 @@ public class BatchEventProcessor {
             EXECUTOR_MAX_POOL_SIZE,
             EXECUTOR_KEEP_ALIVE_TIME_MS,
             TimeUnit.MILLISECONDS,
-            this.executorQueue);
+            this.executorQueue,
+            new PriorityThreadFactory(Thread.MIN_PRIORITY, "dashdive-global-batch-processor"));
     this.executor.pause();
   }
 
@@ -284,8 +288,9 @@ public class BatchEventProcessor {
         final String sendBatchBodyJson = objectMapper.writeValueAsString(validEvents);
         final HttpRequest sendBatchRequest =
             HttpRequest.newBuilder()
-                .uri(ConnectionUtils.getFullUri(
-                    this.ingestBaseUri, ConnectionUtils.Route.S3_BATCH_INGEST))
+                .uri(
+                    ConnectionUtils.getFullUri(
+                        this.ingestBaseUri, ConnectionUtils.Route.S3_BATCH_INGEST))
                 .header(
                     ConnectionUtils.Headers.KEY__CONTENT_TYPE,
                     ConnectionUtils.Headers.VAL__CONTENT_JSON)
@@ -314,7 +319,8 @@ public class BatchEventProcessor {
                     event.telemetryErrors().getItems().size() > 0
                         || event.telemetryWarnings().getItems().size() > 0)
             .collect(ImmutableList.toImmutableList());
-    if (eventsWithTelemetry.size() > 0 && !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false)) {
+    if (eventsWithTelemetry.size() > 0
+        && !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false)) {
       try {
         final TelemetryEvent.ExtractionIssues extractionIssuesPayload =
             ImmutableTelemetryEvent.ExtractionIssues.builder()
@@ -327,8 +333,7 @@ public class BatchEventProcessor {
             HttpRequest.newBuilder()
                 .uri(
                     ConnectionUtils.getFullUri(
-                        this.ingestBaseUri,
-                        ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES))
+                        this.ingestBaseUri, ConnectionUtils.Route.TELEMETRY_EXTRACTION_ISSUES))
                 .header(
                     ConnectionUtils.Headers.KEY__CONTENT_TYPE,
                     ConnectionUtils.Headers.VAL__CONTENT_JSON)

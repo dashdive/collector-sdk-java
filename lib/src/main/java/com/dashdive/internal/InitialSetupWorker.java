@@ -172,7 +172,9 @@ public class InitialSetupWorker implements Runnable {
         final String requestBodyJson = objectMapper.writeValueAsString(invalidApiKeyPayload);
         final HttpRequest invalidApiKeyRequest =
             HttpRequest.newBuilder()
-                .uri(ConnectionUtils.getFullUri(ingestBaseUri, ConnectionUtils.Route.TELEMETRY_API_KEY))
+                .uri(
+                    ConnectionUtils.getFullUri(
+                        ingestBaseUri, ConnectionUtils.Route.TELEMETRY_API_KEY))
                 .header(
                     ConnectionUtils.Headers.KEY__CONTENT_TYPE,
                     ConnectionUtils.Headers.VAL__CONTENT_JSON)
@@ -201,7 +203,9 @@ public class InitialSetupWorker implements Runnable {
   private BatchSizeResult getTargetEventBatchSize() {
     final HttpRequest targetBatchSizeRequest =
         HttpRequest.newBuilder()
-            .uri(ConnectionUtils.getFullUri(ingestBaseUri, ConnectionUtils.Route.S3_RECOMMENDED_BATCH_SIZE))
+            .uri(
+                ConnectionUtils.getFullUri(
+                    ingestBaseUri, ConnectionUtils.Route.S3_RECOMMENDED_BATCH_SIZE))
             .header(ConnectionUtils.Headers.KEY__USER_AGENT, partialUserAgent)
             .header(ConnectionUtils.Headers.KEY__API_KEY, apiKey)
             .GET()
@@ -263,7 +267,10 @@ public class InitialSetupWorker implements Runnable {
 
   private static GetAwsImdsDataResult getAwsImdsData() {
     final int maxImdsRequestConcurrency = 8;
-    final ExecutorService executor = Executors.newFixedThreadPool(maxImdsRequestConcurrency);
+    final ExecutorService executor =
+        Executors.newFixedThreadPool(
+            maxImdsRequestConcurrency,
+            new PriorityThreadFactory(Thread.NORM_PRIORITY, "dashdive-setup-aws-query"));
 
     final ConcurrentMap<String, String> valuesByField = new ConcurrentHashMap<>();
     final ConcurrentMap<String, Exception> exceptionsByField = new ConcurrentHashMap<>();
@@ -434,8 +441,9 @@ public class InitialSetupWorker implements Runnable {
       final String requestBodyJson = objectMapper.writeValueAsString(startupPayload);
       final HttpRequest startupTelemetryRequest =
           HttpRequest.newBuilder()
-              .uri(ConnectionUtils.getFullUri(
-                  ingestBaseUri, ConnectionUtils.Route.TELEMETRY_LIFECYCLE))
+              .uri(
+                  ConnectionUtils.getFullUri(
+                      ingestBaseUri, ConnectionUtils.Route.TELEMETRY_LIFECYCLE))
               .header(
                   ConnectionUtils.Headers.KEY__CONTENT_TYPE,
                   ConnectionUtils.Headers.VAL__CONTENT_JSON)

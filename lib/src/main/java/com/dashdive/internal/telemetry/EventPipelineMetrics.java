@@ -40,16 +40,21 @@ public class EventPipelineMetrics {
   private final Optional<Supplier<Boolean>> disableAllTelemetrySupplier;
 
   public EventPipelineMetrics(
-      AtomicReference<DashdiveInstanceInfo> instanceInfo, String apiKey,
-      URI ingestBaseUri, HttpClient httpClient, Optional<Duration> maxIncrementalMetricsDelay,
+      AtomicReference<DashdiveInstanceInfo> instanceInfo,
+      String apiKey,
+      URI ingestBaseUri,
+      HttpClient httpClient,
+      Optional<Duration> maxIncrementalMetricsDelay,
       Optional<Supplier<Boolean>> disableAllTelemetrySupplier) {
     this.metrics =
         Stream.of(Type.values()).collect(ImmutableMap.toImmutableMap(k -> k, k -> new Metric()));
     this.metricsLock = new ReentrantLock();
     this.disableAllTelemetrySupplier = disableAllTelemetrySupplier;
 
-    this.periodicSender = new ScheduledThreadPoolExecutor(
-        EXECUTOR_CORE_POOL_SIZE, new PriorityThreadFactory(Thread.MIN_PRIORITY));
+    this.periodicSender =
+        new ScheduledThreadPoolExecutor(
+            EXECUTOR_CORE_POOL_SIZE,
+            new PriorityThreadFactory(Thread.MIN_PRIORITY, "dashdive-telemetry-sender"));
     this.periodicSender.setExecuteExistingDelayedTasksAfterShutdownPolicy(true);
     this.periodicSender.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);
     this.periodicSenderFuture = Optional.empty();
@@ -61,12 +66,15 @@ public class EventPipelineMetrics {
     this.instanceInfo = instanceInfo;
     this.apiKey = apiKey;
     this.ingestBaseUri = ingestBaseUri;
-    this.maxIncrementalMetricsDelayMs = maxIncrementalMetricsDelay
-            .map(d -> d.toMillis()).orElse(DEFAULT_MAX_INCREMENTAL_METRICS_AGE_MS);
+    this.maxIncrementalMetricsDelayMs =
+        maxIncrementalMetricsDelay
+            .map(d -> d.toMillis())
+            .orElse(DEFAULT_MAX_INCREMENTAL_METRICS_AGE_MS);
   }
 
   private Void sendIncrementalMetrics() {
-    final boolean shouldDisableTelemetry = disableAllTelemetrySupplier.map(s -> s.get()).orElse(false);
+    final boolean shouldDisableTelemetry =
+        disableAllTelemetrySupplier.map(s -> s.get()).orElse(false);
     if (shouldDisableTelemetry) {
       return null;
     }
@@ -98,8 +106,9 @@ public class EventPipelineMetrics {
       final String requestBodyJson = objectMapper.writeValueAsString(metricsPayload);
       final HttpRequest metricsRequest =
           HttpRequest.newBuilder()
-              .uri(ConnectionUtils.getFullUri(
-                  this.ingestBaseUri, ConnectionUtils.Route.TELEMETRY_METRICS))
+              .uri(
+                  ConnectionUtils.getFullUri(
+                      this.ingestBaseUri, ConnectionUtils.Route.TELEMETRY_METRICS))
               .header(
                   ConnectionUtils.Headers.KEY__CONTENT_TYPE,
                   ConnectionUtils.Headers.VAL__CONTENT_JSON)

@@ -7,6 +7,7 @@ import com.dashdive.internal.extraction.S3RoundTripInterceptor;
 import com.dashdive.internal.telemetry.ImmutableTelemetryItem;
 import com.dashdive.internal.telemetry.TelemetryPayload;
 import com.google.common.collect.ImmutableMap;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -89,7 +90,8 @@ public class TelemetryTest {
             mockHttpClient.getDelegate(),
             Optional.of(setupDefaults),
             false,
-            DashdiveImpl.SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY);
+            DashdiveImpl.SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY,
+            Optional.of(Duration.ofMillis(0)));
 
     final S3RoundTripInterceptor interceptor = dashdive.getInterceptorForImperativeTrigger();
     interceptor.afterExecution(context, TestUtils.EXEC_ATTRS_EMPTY);

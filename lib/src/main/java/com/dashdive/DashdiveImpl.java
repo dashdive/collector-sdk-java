@@ -180,7 +180,8 @@ class DashdiveImpl implements AutoCloseable {
       HttpClient metricsHttpClient,
       Optional<SetupDefaults> skipSetupWithDefaults,
       boolean shouldSkipImdsQueries,
-      String serviceIdSystemPropertyKey) {
+      String serviceIdSystemPropertyKey,
+      Optional<Duration> maxJitter) {
     long startTime = System.currentTimeMillis();
 
     this.dashdiveHttpClient = dashdiveHttpClient;
@@ -222,7 +223,8 @@ class DashdiveImpl implements AutoCloseable {
             targetEventBatchSize,
             batchEventProcessor,
             eventInclusionSampler,
-            maxEventDelay);
+            maxEventDelay,
+            maxJitter);
     this.s3RoundTripInterceptor =
         new S3RoundTripInterceptor(
             this.singleEventBatcher,
@@ -244,6 +246,7 @@ class DashdiveImpl implements AutoCloseable {
             !disableAllTelemetrySupplier.map(s -> s.get()).orElse(false));
     this.initialSetupWorkerThread = new Thread(this.initialSetupWorker);
     this.initialSetupWorkerThread.setPriority(Thread.MIN_PRIORITY);
+    this.initialSetupWorkerThread.setName("dashdive-setup-worker");
     this.initialSetupWorkerThread.start();
     this.isShutDown = new AtomicBoolean(false);
 
@@ -279,7 +282,8 @@ class DashdiveImpl implements AutoCloseable {
         metricsHttpClient,
         skipSetupWithDefaults,
         false,
-        SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY);
+        SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY,
+        Optional.of(Duration.ofMillis(0)));
   }
 
   // TEST ONLY CONSTRUCTOR
@@ -312,7 +316,8 @@ class DashdiveImpl implements AutoCloseable {
         metricsHttpClient,
         skipSetupWithDefaults,
         shouldSkipImdsQueries,
-        serviceIdSystemPropertyKey);
+        serviceIdSystemPropertyKey,
+        Optional.of(Duration.ofMillis(0)));
   }
 
   // TEST ONLY CONSTRUCTOR
@@ -337,7 +342,8 @@ class DashdiveImpl implements AutoCloseable {
         ConnectionUtils.directExecutorHttpClient(),
         Optional.empty(),
         false,
-        SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY);
+        SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY,
+        Optional.of(Duration.ofMillis(0)));
   }
 
   // Actual production use constructor
@@ -370,7 +376,8 @@ class DashdiveImpl implements AutoCloseable {
         ConnectionUtils.directExecutorHttpClient(),
         Optional.empty(),
         false,
-        SERVICE_ID_SYSTEM_PROPERTY_KEY);
+        SERVICE_ID_SYSTEM_PROPERTY_KEY,
+        Optional.empty());
   }
 
   public void close() {
