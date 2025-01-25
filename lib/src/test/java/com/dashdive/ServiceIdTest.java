@@ -19,22 +19,29 @@ public class ServiceIdTest {
     List<Pair<String, String>> testCases =
         Arrays.asList(
             Pair.of("", ""),
-            Pair.of("com.dashdive.DashdiveImpl", "com.dashdive"),
+            Pair.of("com.dashdive.DashdiveImpl", "dashdive"),
             Pair.of(".....", "....."),
             Pair.of("main", "main"),
             Pair.of("MyMainClass", "MyMainClass"),
             Pair.of("main.MyMainClass", "main.MyMainClass"),
             Pair.of("mycompanyservice.main.MyMainClass", "mycompanyservice"),
-            Pair.of("com.rhombus.cloud.rs3.main.Main", "com.rhombus.cloud.rs3"),
+            Pair.of("com.rhombus.cloud.rs3.main.Main", "rhombus.cloud.rs3"),
             Pair.of(
                 "com.rhombus.cloud.sqsconsumer.pose.service.main.SqsConsumerPoseApplication",
-                "com.rhombus.cloud.sqsconsumer.pose.service"),
+                "rhombus.cloud.sqsconsumer.pose.service"),
+            Pair.of(
+                "com.rhombus.cloud.sqsconsumer.pose.service.main.SqsConsumerPoseApplication",
+                "rhombus.cloud.sqsconsumer.pose.service"),
             Pair.of(
                 "com.dashdive.some_svc.MainClass -Dsome.key=some.value --some_arg vals",
-                "com.dashdive.some_svc"),
+                "dashdive.some_svc"),
+            Pair.of("com.main.AntagonisticInput", "com.main.AntagonisticInput"),
             Pair.of(
-                "rhombus-cloud-sqsconsumer-graphics-service-1.0.18-17-g7efbbaa.jar   ",
-                "rhombus-cloud-sqsconsumer-graphics-service"));
+                "org.apache.logging.log4j.core.config.ConfigurationSource",
+                "apache.logging.log4j.core.config"),
+            Pair.of(
+                "rhombus-cloud-sqsconsumer-graphics-service-1.0.18-17-g7efbbaa.jar",
+                "rhombus.cloud.sqsconsumer.graphics.service"));
 
     for (Pair<String, String> testCase : testCases) {
       String input = testCase.getLeft();
@@ -48,7 +55,7 @@ public class ServiceIdTest {
   void testServiceIdEndToEndPropagation() {
     final String mainClassPath =
         "com.rhombus.cloud.sqsconsumer.pose.service.main.SqsConsumerPoseApplication";
-    final String expectedServiceId = "com.rhombus.cloud.sqsconsumer.pose.service";
+    final String expectedServiceId = "rhombus.cloud.sqsconsumer.pose.service";
     System.setProperty(DashdiveImpl.SERVICE_ID_TEST_SYSTEM_PROPERTY_KEY, mainClassPath);
 
     final MockHttpClient ignoredMockHttpClient = new MockHttpClient();

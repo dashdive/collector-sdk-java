@@ -98,7 +98,12 @@ class DashdiveImpl implements AutoCloseable {
       return Optional.empty();
     }
 
-    return getServiceIdFromStartCommand(command.get());
+    try {
+      return getServiceIdFromStartCommand(command.get());
+    } catch (Exception e) {
+      logger.error("Error getting service ID from start command", e);
+      return Optional.empty();
+    }
   }
 
   private static final Pattern SERVICE_NAME_PATTERN_CLASSNAME = Pattern.compile("^(\\w+\\.)*\\w+$");
@@ -136,7 +141,12 @@ class DashdiveImpl implements AutoCloseable {
   private static Optional<String> getServiceIdFromJar(String jarName) {
     Matcher matcher = SERVICE_NAME_PATTERN_JAR.matcher(jarName);
     if (matcher.find()) {
-      return Optional.of(matcher.group(1));
+      try {
+        final String hyphenatedServiceId = matcher.group(1);
+        return Optional.of(hyphenatedServiceId.replace("-", "."));
+      } catch (IndexOutOfBoundsException | IllegalStateException | NullPointerException e) {
+        return Optional.of(jarName);
+      }
     }
     return Optional.of(jarName);
   }
@@ -157,6 +167,13 @@ class DashdiveImpl implements AutoCloseable {
       final String lastComponent = components.get(components.size() - 1);
       if (lastComponent != null && lastComponent.equals("main")) {
         components.remove(components.size() - 1);
+      }
+    }
+
+    if (!components.isEmpty()) {
+      final String firstCompnent = components.get(0);
+      if (firstCompnent != null && (firstCompnent.equals("com") || firstCompnent.equals("org"))) {
+        components.remove(0);
       }
     }
 
