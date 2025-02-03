@@ -55,14 +55,28 @@ function getOutputRequestObject(req: express.Request): object {
   };
 }
 
-const requestObjects = [];
+function formatJson(json: any): string {
+  return JSON.stringify(json, null, 4);
+}
+
+function writeRequestToFile(request: object) {
+  const absoluteFilePath = path.resolve(filePath);
+  fs.mkdirSync(path.dirname(absoluteFilePath), { recursive: true });
+  fs.appendFileSync(absoluteFilePath, formatJson(request) + ",\n");
+}
+
+fs.mkdirSync(path.dirname(path.resolve(filePath)), { recursive: true });
+fs.writeFileSync(path.resolve(filePath), "[\n");
+
 app.get("/s3/recommendedBatchSize", (req, res) => {
-  requestObjects.push(getOutputRequestObject(req));
+  const requestObject = getOutputRequestObject(req);
+  writeRequestToFile(requestObject);
   res.send("100");
 });
 
 app.all("*", (req, res) => {
-  requestObjects.push(getOutputRequestObject(req));
+  const requestObject = getOutputRequestObject(req);
+  writeRequestToFile(requestObject);
   res.sendStatus(200);
 });
 
@@ -75,19 +89,12 @@ const server = app.listen(port, () => {
   console.log("\n");
 });
 
-function formatJson(json: any): string {
-  return JSON.stringify(json, null, 4);
-}
-
 process.on("SIGTERM", () => {
-  console.log("SIGTERM signal received: writing logs and closing HTTP server");
+  console.log("SIGTERM signal received: closing HTTP server");
 
+  // Close the JSON array in the file
   const absoluteFilePath = path.resolve(filePath);
-  console.log(`Writing request logs to: ${absoluteFilePath}`);
-
-  const content = formatJson(requestObjects);
-  fs.mkdirSync(path.dirname(absoluteFilePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
+  fs.appendFileSync(absoluteFilePath, "]");
 
   server.close(() => {
     console.log("HTTP server closed");
