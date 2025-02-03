@@ -84,6 +84,7 @@ public class TelemetryTest {
             Optional.of(disableAllTelemetry),
             Optional.empty(),
             Optional.empty(),
+            Optional.empty(),
             mockHttpClient.getDelegate(),
             mockHttpClient.getDelegate(),
             mockHttpClient.getDelegate(),

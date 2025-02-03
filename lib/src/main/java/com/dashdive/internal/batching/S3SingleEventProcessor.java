@@ -34,6 +34,35 @@ public class S3SingleEventProcessor {
 
   private S3SingleEventProcessor() {}
 
+  private static Optional<String> inferRegionFromEgressFullHost(String egressFullHost) {
+    final ImmutableList<String> s3HostParts = ImmutableList.copyOf(egressFullHost.split("\\."));
+    if (s3HostParts.size() < 3) {
+      return Optional.empty();
+    }
+
+    final String inferredRegionToken = s3HostParts.get(s3HostParts.size() - 3);
+    if (inferredRegionToken == null || inferredRegionToken.isEmpty()) {
+      return Optional.empty();
+    }
+
+    if (validAwsRegionIds.contains(inferredRegionToken)) {
+      return Optional.of(inferredRegionToken);
+    }
+
+    if (inferredRegionToken.startsWith("s3-")) {
+      final String inferredRegion = inferredRegionToken.substring(3);
+      return validAwsRegionIds.contains(inferredRegion)
+          ? Optional.of(inferredRegion)
+          : Optional.empty();
+    }
+
+    if (inferredRegionToken.equals("s3")) {
+      return Optional.of(Region.US_EAST_1.id());
+    }
+
+    return Optional.empty();
+  }
+
   private static S3SingleExtractedEvent processEvent_GetObject(
       S3SingleExtractedEvent event, Optional<String> machineRegion) {
     if (event.hasIrrecoverableErrors()) {
@@ -57,16 +86,12 @@ public class S3SingleEventProcessor {
       return event;
     }
 
-    final ImmutableList<String> s3HostParts = ImmutableList.copyOf(egressFullHost.split("\\."));
-    final String inferredRegion =
-        s3HostParts.size() >= 3 ? s3HostParts.get(s3HostParts.size() - 3) : "";
-    if (inferredRegion.isEmpty() || !validAwsRegionIds.contains(inferredRegion)) {
+    final Optional<String> inferredRegion = inferRegionFromEgressFullHost(egressFullHost);
+    if (inferredRegion.isEmpty()) {
       final TelemetryItem newWarning =
           ImmutableTelemetryItem.builder()
               .type("INFER_REGION_FAILURE")
-              .data(
-                  ImmutableMap.of(
-                      "inferredRegion", inferredRegion, "egressFullHost", egressFullHost))
+              .data(ImmutableMap.of("egressFullHost", egressFullHost))
               .build();
       return ImmutableS3SingleExtractedEvent.builder()
           .from(event)
@@ -80,7 +105,7 @@ public class S3SingleEventProcessor {
 
     updatedDataPayloadBuilder.put(
         S3EventFieldName.IS_EGRESS_BILLABLE,
-        !(machineRegion.isPresent() && machineRegion.get().equals(inferredRegion)));
+        !(machineRegion.isPresent() && machineRegion.get().equals(inferredRegion.get())));
 
     return ImmutableS3SingleExtractedEvent.builder()
         .from(event)

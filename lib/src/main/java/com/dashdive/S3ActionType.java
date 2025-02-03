@@ -49,6 +49,7 @@ public enum S3ActionType {
   DELETE_BUCKET_ENCRYPTION("DeleteBucketEncryption"),
   GET_OBJECT_LOCK_CONFIGURATION("GetObjectLockConfiguration"),
   PUT_OBJECT_LOCK_CONFIGURATION("PutObjectLockConfiguration"),
+  LIST_OBJECTS("ListObjects"),
   LIST_OBJECTS_V2("ListObjectsV2"),
   LIST_OBJECT_VERSIONS("ListObjectVersions"),
 

@@ -8,6 +8,9 @@ import com.google.common.collect.ImmutableMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.SdkRequest;
@@ -64,6 +67,8 @@ import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ListPartsRequest;
@@ -240,6 +245,10 @@ public class S3DistinctEventDataExtractor {
         S3ActionType.PUT_OBJECT_LOCK_CONFIGURATION);
     pojoMapBuilder.put(
         serializeRoundTripClassNames(
+            ListObjectsRequest.class.getName(), ListObjectsResponse.class.getName()),
+        S3ActionType.LIST_OBJECTS);
+    pojoMapBuilder.put(
+        serializeRoundTripClassNames(
             ListObjectsV2Request.class.getName(), ListObjectsV2Response.class.getName()),
         S3ActionType.LIST_OBJECTS_V2);
     pojoMapBuilder.put(
@@ -405,6 +414,13 @@ public class S3DistinctEventDataExtractor {
                 (ListMultipartUploadsResponse) roundTripData.pojoResponse());
         break;
 
+      case LIST_OBJECTS:
+        distinctFields =
+            extractDistinctFieldsForEventType_ListObjects(
+                (ListObjectsRequest) roundTripData.pojoRequest(),
+                (ListObjectsResponse) roundTripData.pojoResponse());
+        break;
+
       case LIST_OBJECTS_V2:
         distinctFields =
             extractDistinctFieldsForEventType_ListObjectsV2(
@@ -497,22 +513,63 @@ public class S3DistinctEventDataExtractor {
         nullableContentLength);
   }
 
+  private static final Pattern ACCESS_POINT_PATTERN =
+      Pattern.compile("accesspoint/(.+)/object/(.+)$");
+
+  private static Optional<Pair<String, String>> parseSourceObject(CopyObjectRequest request) {
+    final String copySource = request.copySource();
+    if (copySource != null) {
+      // Access points
+      if (copySource.startsWith("arn")) {
+        Matcher matcher = ACCESS_POINT_PATTERN.matcher(copySource);
+        if (matcher.find() && matcher.group(1) != null && matcher.group(2) != null) {
+          return Optional.of(Pair.of(matcher.group(1), matcher.group(2)));
+        }
+        return Optional.empty();
+      }
+
+      // Bucket + key
+      final int slashIndex = copySource.indexOf("/");
+      if (slashIndex == -1) {
+        return Optional.empty();
+      }
+
+      final String bucketName = copySource.substring(0, slashIndex);
+      final String key = copySource.substring(slashIndex + 1);
+      return Optional.of(Pair.of(bucketName, key));
+    }
+
+    if (request.sourceBucket() != null && request.sourceKey() != null) {
+      return Optional.of(Pair.of(request.sourceBucket(), request.sourceKey()));
+    }
+
+    return Optional.empty();
+  }
+
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_CopyObject(
       CopyObjectRequest request, CopyObjectResponse response) {
     final String safeDestVersionId = Optional.ofNullable(response.versionId()).orElse("");
     final String safeSourceVersionId = Optional.ofNullable(request.sourceVersionId()).orElse("");
-    return ImmutableMap.of(
-        S3EventFieldName.BUCKET_NAME,
-        request.destinationBucket(),
-        S3EventFieldName.OBJECT_KEY,
-        request.destinationKey(),
-        S3EventFieldName.OBJECT_VERSION_ID,
-        safeDestVersionId,
-        S3EventFieldName.COPY_SOURCE_OBJECT,
-        ImmutableMap.of(
-            S3EventFieldName.BUCKET_NAME, request.sourceBucket(),
-            S3EventFieldName.OBJECT_KEY, request.sourceKey(),
-            S3EventFieldName.OBJECT_VERSION_ID, safeSourceVersionId));
+
+    final Optional<Pair<String, String>> sourceObject = parseSourceObject(request);
+
+    final ImmutableMap.Builder<String, Object> resultBuilder =
+        ImmutableMap.<String, Object>builder()
+            .put(S3EventFieldName.BUCKET_NAME, request.destinationBucket())
+            .put(S3EventFieldName.OBJECT_KEY, request.destinationKey())
+            .put(S3EventFieldName.OBJECT_VERSION_ID, safeDestVersionId);
+
+    if (sourceObject.isPresent()) {
+      final Pair<String, String> sourceObjectPair = sourceObject.get();
+      resultBuilder.put(
+          S3EventFieldName.COPY_SOURCE_OBJECT,
+          ImmutableMap.of(
+              S3EventFieldName.BUCKET_NAME, sourceObjectPair.getLeft(),
+              S3EventFieldName.OBJECT_KEY, sourceObjectPair.getRight(),
+              S3EventFieldName.OBJECT_VERSION_ID, safeSourceVersionId));
+    }
+
+    return resultBuilder.build();
   }
 
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_DeleteObject(
@@ -590,6 +647,15 @@ public class S3DistinctEventDataExtractor {
             S3EventFieldName.BUCKET_NAME, request.bucket(),
             S3EventFieldName.OBJECT_KEY_PREFIX, commonPrefix,
             S3EventFieldName.DELETED_OBJECTS, deletedObjects);
+  }
+
+  private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_ListObjects(
+      ListObjectsRequest request, ListObjectsResponse response) {
+    return ImmutableMap.of(
+        S3EventFieldName.BUCKET_NAME,
+        request.bucket(),
+        S3EventFieldName.OBJECT_KEY_PREFIX,
+        request.prefix() == null ? "" : request.prefix());
   }
 
   private static ImmutableMap<String, Object> extractDistinctFieldsForEventType_ListObjectsV2(
@@ -700,6 +766,8 @@ public class S3DistinctEventDataExtractor {
       extractDistinctFieldsForMultipleEventTypes_SimplePerObject(
           SdkRequest request, SdkResponse response) throws NoSuchElementException {
     return ImmutableMap.of(
-        S3EventFieldName.BUCKET_NAME, request.getValueForField("Key", String.class).orElseThrow());
+        S3EventFieldName.BUCKET_NAME,
+            request.getValueForField("Bucket", String.class).orElseThrow(),
+        S3EventFieldName.OBJECT_KEY, request.getValueForField("Key", String.class).orElseThrow());
   }
 }

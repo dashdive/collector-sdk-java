@@ -189,6 +189,7 @@ class DashdiveImpl implements AutoCloseable {
       Optional<Duration> shutdownGracePeriod,
       Optional<Supplier<Boolean>> eventInclusionSampler,
       Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
+      Optional<Supplier<Boolean>> enableFailureTelemetrySupplier,
       Optional<Duration> maxEventDelay,
       Optional<Duration> maxMetricsDelay,
       HttpClient dashdiveHttpClient,
@@ -247,7 +248,8 @@ class DashdiveImpl implements AutoCloseable {
             this.singleEventBatcher,
             this.serviceId.isPresent()
                 ? ImmutableMap.of("serviceId", this.serviceId.get())
-                : ImmutableMap.of());
+                : ImmutableMap.of(),
+            enableFailureTelemetrySupplier);
 
     this.initialSetupWorker =
         new InitialSetupWorker(
@@ -293,6 +295,7 @@ class DashdiveImpl implements AutoCloseable {
         Optional.empty(),
         Optional.empty(),
         Optional.empty(),
+        Optional.empty(),
         dashdiveHttpClient,
         setupHttpClient,
         batchProcessorHttpClient,
@@ -327,6 +330,7 @@ class DashdiveImpl implements AutoCloseable {
         Optional.empty(),
         Optional.empty(),
         Optional.empty(),
+        Optional.empty(),
         dashdiveHttpClient,
         setupHttpClient,
         batchProcessorHttpClient,
@@ -353,6 +357,7 @@ class DashdiveImpl implements AutoCloseable {
         Optional.empty(),
         Optional.empty(),
         Optional.empty(),
+        Optional.empty(),
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
         ConnectionUtils.directExecutorHttpClient(),
@@ -374,6 +379,7 @@ class DashdiveImpl implements AutoCloseable {
       Optional<Duration> shutdownGracePeriod,
       Optional<Supplier<Boolean>> eventInclusionSampler,
       Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
+      Optional<Supplier<Boolean>> enableFailureTelemetrySupplier,
       Optional<Duration> maxEventDelay,
       Optional<Duration> maxMetricsDelay) {
     // No need to check the user-supplied values for null, since the Immutables
@@ -385,6 +391,7 @@ class DashdiveImpl implements AutoCloseable {
         shutdownGracePeriod,
         eventInclusionSampler,
         disableAllTelemetrySupplier,
+        enableFailureTelemetrySupplier,
         maxEventDelay,
         maxMetricsDelay,
         ConnectionUtils.directExecutorHttpClient(),

@@ -44,6 +44,9 @@ public class Dashdive implements AutoCloseable {
    *     absolutely nothing)
    * @param disableAllTelemetrySupplier if present and calling evalutes to true, don't send any
    *     telemetry
+   * @param enableFailureTelemetrySupplier if present and calling evalutes to true, send failure
+   *     telemetry (when S3Client 4xx's, mainly); will NOT override `disableAllTelemetrySupplier` ->
+   *     true
    * @param maxEventDelay specify a max age before a batch is flushed (default 600 seconds)
    * @param maxMetricsDelay specify a max age before incremental metrics are flushed (default 600
    *     seconds)
@@ -59,6 +62,7 @@ public class Dashdive implements AutoCloseable {
       Optional<Supplier<Boolean>> eventInclusionSampler,
       Optional<Boolean> useNoOp,
       Optional<Supplier<Boolean>> disableAllTelemetrySupplier,
+      Optional<Supplier<Boolean>> enableFailureTelemetrySupplier,
       Optional<Duration> maxEventDelay,
       Optional<Duration> maxMetricsDelay) {
     boolean isRequiredFieldMissing =
@@ -91,6 +95,7 @@ public class Dashdive implements AutoCloseable {
                   shutdownGracePeriod,
                   eventInclusionSampler,
                   disableAllTelemetrySupplier,
+                  enableFailureTelemetrySupplier,
                   maxEventDelay,
                   maxMetricsDelay));
     }

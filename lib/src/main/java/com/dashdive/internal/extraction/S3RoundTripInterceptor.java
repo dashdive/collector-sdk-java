@@ -9,6 +9,8 @@ import com.dashdive.internal.telemetry.TelemetryPayload;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.interceptor.Context;
@@ -21,11 +23,15 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
 
   private final SingleEventBatcher batcher;
   private final Map<String, Object> additionalPayloadFields;
+  private final Optional<Supplier<Boolean>> enableFailureTelemetrySupplier;
 
   public S3RoundTripInterceptor(
-      SingleEventBatcher batcher, Map<String, Object> additionalPayloadFields) {
+      SingleEventBatcher batcher,
+      Map<String, Object> additionalPayloadFields,
+      Optional<Supplier<Boolean>> enableFailureTelemetrySupplier) {
     this.batcher = batcher;
     this.additionalPayloadFields = additionalPayloadFields;
+    this.enableFailureTelemetrySupplier = enableFailureTelemetrySupplier;
   }
 
   /*
@@ -88,6 +94,8 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
               && context.response().isPresent()
               && context.httpResponse().isPresent()
               && context.httpResponse().get().isSuccessful();
+      final boolean shouldSendFailureTelemetry =
+          this.enableFailureTelemetrySupplier.map(Supplier::get).orElse(false);
       // If request was successful, extract payload as normal but also send telemetry.
       // If request failed, only send telemetry.
       if (wasRequestSuccessful && !hasSentPayload) {
@@ -102,15 +110,19 @@ public class S3RoundTripInterceptor implements ExecutionInterceptor {
                     .build(),
                 this.additionalPayloadFields);
 
-        final S3SingleExtractedEvent extractedPayloadWithTelemetry =
-            ImmutableS3SingleExtractedEvent.builder()
-                .from(extractedPayload)
-                .telemetryWarnings(executionFailurePayload)
-                .build();
-        this.batcher.queueEventForIngestion(extractedPayloadWithTelemetry);
+        if (shouldSendFailureTelemetry) {
+          final S3SingleExtractedEvent extractedPayloadWithTelemetry =
+              ImmutableS3SingleExtractedEvent.builder()
+                  .from(extractedPayload)
+                  .telemetryWarnings(executionFailurePayload)
+                  .build();
+          this.batcher.queueEventForIngestion(extractedPayloadWithTelemetry);
+        } else {
+          this.batcher.queueEventForIngestion(extractedPayload);
+        }
 
         executionAttributes.putAttribute(sentPayloadAttr, true);
-      } else {
+      } else if (shouldSendFailureTelemetry) {
         final S3SingleExtractedEvent failedEventPayload =
             ImmutableS3SingleExtractedEvent.builder()
                 .hasIrrecoverableErrors(true)
