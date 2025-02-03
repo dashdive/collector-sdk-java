@@ -6,6 +6,14 @@ These SDKs are wrappers over SDKs for common cloud providers and cloud services.
 
 Currently, only the AWS SDK for S3 in Java is supported. Work is underway to add support for additional services and languages.
 
+## Building and Releasing
+
+Ensure that `dashdiveSdkVersion` in `lib/build.gradle` and `final String VERSION` in `class Dashdive` match and are set to latest. Then run:
+
+```bash
+gradle :lib:publishAllPublicationsToMavenRepository
+```
+
 ## Installation
 
 ### From Maven Central
